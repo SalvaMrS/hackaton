@@ -4,6 +4,67 @@ import { iniciarChat } from './chat.js';
 const app = document.getElementById('app');
 const ubicacion = { lat: null, lng: null };
 let slugActual = null;
+const CLAVE_MIS_TURNOS = 'mis-turnos';
+
+function leerCodigosGuardados() {
+  try { return JSON.parse(localStorage.getItem(CLAVE_MIS_TURNOS)) ?? []; } catch { return []; }
+}
+
+function guardarCodigo(codigo) {
+  try {
+    const codigos = new Set(leerCodigosGuardados());
+    codigos.add(codigo);
+    localStorage.setItem(CLAVE_MIS_TURNOS, JSON.stringify([...codigos]));
+  } catch { /* sin almacenamiento: el cliente igual conserva su código */ }
+}
+
+function tarjetaTurno(turno, alCambiar) {
+  const mapa = turno.lat != null ? `https://www.openstreetmap.org/?mlat=${turno.lat}&mlon=${turno.lng}#map=17/${turno.lat}/${turno.lng}` : null;
+  return h('div', { class: 'tarjeta' },
+    h('div', { class: 'fila' }, h('strong', {}, turno.comercio), h('span', { class: `etiqueta ${turno.estado}` }, turno.estado.replace('_', ' '))),
+    h('p', { style: 'margin:6px 0' }, `📅 ${turno.inicio.slice(0, 10)} · ${turno.inicio.slice(11)}–${turno.fin.slice(11)}`),
+    h('div', {}, `${turno.servicio} · ${turno.personas} pers.`),
+    h('div', {}, `🪑 Tu lugar: `, h('strong', {}, turno.plaza)),
+    turno.direccion && h('div', { class: 'suave' }, `📍 ${turno.direccion}`, mapa && h('span', {}, ' · ', h('a', { href: mapa, target: '_blank', rel: 'noopener' }, 'ver en el mapa'))),
+    turno.telefono && h('div', { class: 'suave' }, `📞 ${turno.telefono}`),
+    h('div', { class: 'suave' }, `Código: ${turno.codigo}`),
+    turno.estado === 'confirmado' && h('button', { class: 'peligro', style: 'margin-top:8px', onclick: async () => {
+      await api(`/api/turnos/codigo/${turno.codigo}/cancelar`, { metodo: 'POST' });
+      alCambiar();
+    } }, 'Cancelar turno'));
+}
+
+function seccionMisTurnos() {
+  const lista = h('div', { class: 'grilla' });
+  const codigo = h('input', { placeholder: 'Código de tu reserva', maxlength: 10, style: 'width:190px;text-transform:uppercase' });
+  const mensaje = h('p');
+
+  async function cargar() {
+    const turnos = [];
+    for (const guardado of leerCodigosGuardados()) {
+      try { turnos.push(await api(`/api/turnos/codigo/${guardado}`)); } catch { /* código inexistente: se omite */ }
+    }
+    turnos.sort((a, b) => a.inicio.localeCompare(b.inicio));
+    lista.replaceChildren(...(turnos.length ? turnos.map((turno) => tarjetaTurno(turno, cargar))
+      : [h('p', { class: 'suave' }, 'Todavía no tenés turnos. Reservá uno o ingresá tu código.')]));
+  }
+
+  async function agregarPorCodigo(evento) {
+    evento.preventDefault();
+    try {
+      const turno = await api(`/api/turnos/codigo/${encodeURIComponent(codigo.value.trim())}`);
+      guardarCodigo(turno.codigo);
+      codigo.value = '';
+      mensaje.textContent = '';
+      await cargar();
+    } catch (error) { mostrarError(mensaje, error); }
+  }
+
+  cargar();
+  return h('section', {}, h('h2', {}, 'Mis turnos'),
+    h('form', { class: 'fila', onsubmit: agregarPorCodigo }, codigo, h('button', { type: 'submit', class: 'secundario' }, 'Buscar mi turno')),
+    mensaje, lista);
+}
 
 iniciarChat({ obtenerContexto: () => ({ ...ubicacion, slug: slugActual }) });
 
@@ -45,7 +106,7 @@ async function mostrarBuscador() {
     h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
       texto, h('button', { type: 'submit' }, 'Buscar'),
       h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí')),
-    estado, resultados);
+    estado, resultados, seccionMisTurnos());
   buscar();
 }
 
@@ -97,9 +158,11 @@ async function mostrarComercio(slug) {
       const turno = await api(`/api/comercios/${slug}/turnos`, { metodo: 'POST', cuerpo: {
         servicio_id: reserva.servicio.id, inicio: reserva.inicio, personas: Number(personas.value),
         cliente_nombre: nombre.value, cliente_telefono: telefono.value } });
+      guardarCodigo(turno.codigo);
       pasoReserva.replaceChildren(h('h2', { class: 'mensaje-ok', style: 'margin-top:0' }, '¡Reserva confirmada!'),
         h('p', {}, `${turno.servicio} · ${turno.inicio.replace('T', ' ')} · para ${personas.value} · ${turno.plaza}`),
-        h('p', {}, 'Tu código: ', h('strong', {}, turno.codigo)));
+        h('p', {}, 'Tu código: ', h('strong', {}, turno.codigo)),
+        h('a', { class: 'boton', href: '/' }, 'Ver mis turnos'));
     } catch (error) {
       mensaje.className = 'mensaje-error';
       mensaje.textContent = error.message;

@@ -49,14 +49,24 @@ export function rutasPublicas(app) {
     return reply.status(201).send(turno);
   });
 
-  app.get('/api/turnos/codigo/:codigo', async (req) => {
+  const buscarPorCodigo = (codigo) => {
     const turno = db.prepare(
-      `SELECT t.codigo, t.inicio, t.fin, t.estado, t.cliente_nombre, s.nombre AS servicio, p.nombre AS plaza, c.nombre AS comercio
+      `SELECT t.codigo, t.inicio, t.fin, t.estado, t.personas, t.cliente_nombre, s.nombre AS servicio, p.nombre AS plaza,
+              c.nombre AS comercio, c.slug, c.direccion, c.telefono, c.lat, c.lng
        FROM turnos t JOIN servicios s ON s.id = t.servicio_id JOIN plazas p ON p.id = t.plaza_id JOIN comercios c ON c.id = t.comercio_id
        WHERE t.codigo = ?`,
-    ).get(String(req.params.codigo).toUpperCase());
+    ).get(String(codigo).toUpperCase());
     if (!turno) throw errorHttp(404, 'turno_no_encontrado', 'No existe un turno con ese código');
     return turno;
+  };
+
+  app.get('/api/turnos/codigo/:codigo', async (req) => buscarPorCodigo(req.params.codigo));
+
+  app.post('/api/turnos/codigo/:codigo/cancelar', async (req) => {
+    const turno = buscarPorCodigo(req.params.codigo);
+    if (turno.estado !== 'confirmado') throw errorHttp(409, 'no_cancelable', 'Este turno ya no se puede cancelar');
+    db.prepare("UPDATE turnos SET estado = 'cancelado' WHERE codigo = ?").run(turno.codigo);
+    return { ...turno, estado: 'cancelado' };
   });
 
   app.post('/api/chat', { config: { rateLimit: { max: LIMITE_CHAT_POR_MINUTO, timeWindow: '1 minute' } } }, async (req) =>
