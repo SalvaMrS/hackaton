@@ -2,71 +2,59 @@ import { h, api, dinero, DIAS, fechaHoy, mostrarError } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
+const barra = document.getElementById('acciones-barra');
 const ubicacion = { lat: null, lng: null };
+const sesion = { usuario: null, googleHabilitado: false };
 let slugActual = null;
-const CLAVE_MIS_TURNOS = 'mis-turnos';
-
-function leerCodigosGuardados() {
-  try { return JSON.parse(localStorage.getItem(CLAVE_MIS_TURNOS)) ?? []; } catch { return []; }
-}
-
-function guardarCodigo(codigo) {
-  try {
-    const codigos = new Set(leerCodigosGuardados());
-    codigos.add(codigo);
-    localStorage.setItem(CLAVE_MIS_TURNOS, JSON.stringify([...codigos]));
-  } catch { /* sin almacenamiento: el cliente igual conserva su código */ }
-}
-
-function tarjetaTurno(turno, alCambiar) {
-  const mapa = turno.lat != null ? `https://www.openstreetmap.org/?mlat=${turno.lat}&mlon=${turno.lng}#map=17/${turno.lat}/${turno.lng}` : null;
-  return h('div', { class: 'tarjeta' },
-    h('div', { class: 'fila' }, h('strong', {}, turno.comercio), h('span', { class: `etiqueta ${turno.estado}` }, turno.estado.replace('_', ' '))),
-    h('p', { style: 'margin:6px 0' }, `📅 ${turno.inicio.slice(0, 10)} · ${turno.inicio.slice(11)}–${turno.fin.slice(11)}`),
-    h('div', {}, `${turno.servicio} · ${turno.personas} pers.`),
-    h('div', {}, `🪑 Tu lugar: `, h('strong', {}, turno.plaza)),
-    turno.direccion && h('div', { class: 'suave' }, `📍 ${turno.direccion}`, mapa && h('span', {}, ' · ', h('a', { href: mapa, target: '_blank', rel: 'noopener' }, 'ver en el mapa'))),
-    turno.telefono && h('div', { class: 'suave' }, `📞 ${turno.telefono}`),
-    h('div', { class: 'suave' }, `Código: ${turno.codigo}`),
-    turno.estado === 'confirmado' && h('button', { class: 'peligro', style: 'margin-top:8px', onclick: async () => {
-      await api(`/api/turnos/codigo/${turno.codigo}/cancelar`, { metodo: 'POST' });
-      alCambiar();
-    } }, 'Cancelar turno'));
-}
-
-function seccionMisTurnos() {
-  const lista = h('div', { class: 'grilla' });
-  const codigo = h('input', { placeholder: 'Código de tu reserva', maxlength: 10, style: 'width:190px;text-transform:uppercase' });
-  const mensaje = h('p');
-
-  async function cargar() {
-    const turnos = [];
-    for (const guardado of leerCodigosGuardados()) {
-      try { turnos.push(await api(`/api/turnos/codigo/${guardado}`)); } catch { /* código inexistente: se omite */ }
-    }
-    turnos.sort((a, b) => a.inicio.localeCompare(b.inicio));
-    lista.replaceChildren(...(turnos.length ? turnos.map((turno) => tarjetaTurno(turno, cargar))
-      : [h('p', { class: 'suave' }, 'Todavía no tenés turnos. Reservá uno o ingresá tu código.')]));
-  }
-
-  async function agregarPorCodigo(evento) {
-    evento.preventDefault();
-    try {
-      const turno = await api(`/api/turnos/codigo/${encodeURIComponent(codigo.value.trim())}`);
-      guardarCodigo(turno.codigo);
-      codigo.value = '';
-      mensaje.textContent = '';
-      await cargar();
-    } catch (error) { mostrarError(mensaje, error); }
-  }
-
-  cargar();
-  return h('section', {}, h('h2', {}, 'Mis turnos'),
-    h('form', { class: 'fila', onsubmit: agregarPorCodigo }, codigo, h('button', { type: 'submit', class: 'secundario' }, 'Buscar mi turno')),
-    mensaje, lista);
-}
 
 iniciarChat({ obtenerContexto: () => ({ ...ubicacion, slug: slugActual }) });
+
+async function cargarSesion() {
+  const { usuario, googleHabilitado } = await api('/api/yo');
+  sesion.usuario = usuario;
+  sesion.googleHabilitado = googleHabilitado;
+  dibujarBarra();
+}
+
+function dibujarBarra() {
+  barra.replaceChildren(
+    sesion.usuario
+      ? h('span', { class: 'fila' }, h('span', { class: 'suave' }, sesion.usuario.nombre || sesion.usuario.email),
+        h('a', { class: 'boton secundario', href: '/#mis-turnos' }, 'Mis turnos'),
+        h('button', { class: 'secundario', onclick: async () => { await api('/api/auth/salir', { metodo: 'POST' }); location.href = '/'; } }, 'Salir'))
+      : h('span', { class: 'suave' }, 'Navegá libremente; te pedimos ingresar al reservar.'),
+    h('a', { class: 'boton secundario', href: '/panel.html' }, 'Soy un comercio'));
+}
+
+function formularioIngreso({ alIngresar }) {
+  const email = h('input', { type: 'email', placeholder: 'tu@email.com', required: true });
+  const password = h('input', { type: 'password', placeholder: 'Contraseña (mín. 6)', required: true });
+  const mensaje = h('p');
+  const enviar = (ruta) => async (evento) => {
+    evento.preventDefault();
+    try {
+      await api(ruta, { metodo: 'POST', cuerpo: { email: email.value, password: password.value } });
+      await cargarSesion();
+      alIngresar();
+    } catch (error) { mostrarError(mensaje, error); }
+  };
+  const destino = encodeURIComponent(slugActual ? `/?c=${slugActual}` : '/');
+  return h('form', { class: 'tarjeta formulario', onsubmit: enviar('/api/auth/login') },
+    h('strong', { style: 'grid-column:1/-1' }, 'Ingresá para confirmar tu reserva'),
+    email, password,
+    h('div', { class: 'fila' },
+      h('button', { type: 'submit' }, 'Ingresar'),
+      h('button', { type: 'button', class: 'secundario', onclick: enviar('/api/auth/registro') }, 'Crear cuenta'),
+      sesion.googleHabilitado && h('a', { class: 'boton secundario', href: `/api/auth/google?destino=${destino}` }, 'Continuar con Google')),
+    mensaje);
+}
+
+function pedirUbicacion(alObtener, alFallar) {
+  if (!navigator.geolocation) return alFallar();
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => { ubicacion.lat = coords.latitude; ubicacion.lng = coords.longitude; alObtener(); },
+    alFallar, { timeout: 8000 });
+}
 
 function tarjetaComercio(comercio) {
   return h('a', { class: 'tarjeta', href: `?c=${comercio.slug}`, style: 'text-decoration:none;color:inherit' },
@@ -77,6 +65,36 @@ function tarjetaComercio(comercio) {
     comercio.direccion && h('div', { class: 'suave' }, `📍 ${comercio.direccion}`));
 }
 
+function tarjetaTurno(turno, alCambiar) {
+  const mapa = turno.lat != null ? `https://www.openstreetmap.org/?mlat=${turno.lat}&mlon=${turno.lng}#map=17/${turno.lat}/${turno.lng}` : null;
+  return h('div', { class: 'tarjeta' },
+    h('div', { class: 'fila' }, h('strong', {}, turno.comercio), h('span', { class: `etiqueta ${turno.estado}` }, turno.estado.replace('_', ' '))),
+    h('p', { style: 'margin:6px 0' }, `📅 ${turno.inicio.slice(0, 10)} · ${turno.inicio.slice(11)}–${turno.fin.slice(11)}`),
+    h('div', {}, `${turno.servicio} · ${turno.personas} pers. · a nombre de ${turno.cliente_nombre}`),
+    h('div', {}, '🪑 Tu lugar: ', h('strong', {}, turno.plaza)),
+    turno.direccion && h('div', { class: 'suave' }, `📍 ${turno.direccion}`, mapa && h('span', {}, ' · ', h('a', { href: mapa, target: '_blank', rel: 'noopener' }, 'ver en el mapa'))),
+    turno.telefono && h('div', { class: 'suave' }, `📞 ${turno.telefono}`),
+    turno.estado === 'confirmado' && h('button', { class: 'peligro', style: 'margin-top:8px', onclick: async () => {
+      await api(`/api/mis-turnos/${turno.id}/cancelar`, { metodo: 'POST' });
+      alCambiar();
+    } }, 'Cancelar turno'));
+}
+
+function seccionMisTurnos() {
+  const lista = h('div', { class: 'grilla' });
+  async function cargar() {
+    try {
+      const turnos = await api('/api/mis-turnos');
+      const vigentes = turnos.filter((turno) => ['confirmado', 'en_curso'].includes(turno.estado)).reverse();
+      const anteriores = turnos.filter((turno) => !vigentes.includes(turno));
+      lista.replaceChildren(...(turnos.length ? [...vigentes, ...anteriores].map((turno) => tarjetaTurno(turno, cargar))
+        : [h('p', { class: 'suave' }, 'Todavía no tenés turnos. Buscá un comercio y reservá.')]));
+    } catch (error) { mostrarError(lista, error); }
+  }
+  cargar();
+  return h('section', { id: 'mis-turnos' }, h('h2', {}, 'Mis turnos'), lista);
+}
+
 async function mostrarBuscador() {
   slugActual = null;
   const resultados = h('div', { class: 'grilla' });
@@ -85,7 +103,7 @@ async function mostrarBuscador() {
 
   async function buscar() {
     const consulta = new URLSearchParams({ q: texto.value });
-    if (ubicacion.lat != null) consulta.set('lat', ubicacion.lat), consulta.set('lng', ubicacion.lng);
+    if (ubicacion.lat != null) { consulta.set('lat', ubicacion.lat); consulta.set('lng', ubicacion.lng); }
     try {
       const comercios = await api(`/api/comercios?${consulta}`);
       resultados.replaceChildren(...comercios.map(tarjetaComercio));
@@ -93,21 +111,19 @@ async function mostrarBuscador() {
     } catch (error) { mostrarError(estado, error); }
   }
 
-  function usarUbicacion() {
+  const usarUbicacion = () => {
     estado.textContent = 'Buscando tu ubicación…';
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => { ubicacion.lat = coords.latitude; ubicacion.lng = coords.longitude; buscar(); },
-      () => { estado.textContent = 'No pudimos obtener tu ubicación; mostramos todos los comercios.'; },
-      { timeout: 8000 });
-  }
+    pedirUbicacion(buscar, () => { estado.textContent = 'Sin tu ubicación no podemos ordenar por cercanía, pero podés buscar igual.'; });
+  };
 
   app.replaceChildren(
     h('h1', {}, 'Reservá turnos cerca tuyo'),
     h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
       texto, h('button', { type: 'submit' }, 'Buscar'),
       h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí')),
-    estado, resultados, seccionMisTurnos());
+    estado, resultados, sesion.usuario && seccionMisTurnos());
   buscar();
+  pedirUbicacion(buscar, () => { estado.textContent = 'Activá tu ubicación para ver primero lo más cercano. También podés buscar sin ella.'; });
 }
 
 async function mostrarComercio(slug) {
@@ -121,18 +137,18 @@ async function mostrarComercio(slug) {
   const fecha = h('input', { type: 'date', value: fechaHoy(), min: fechaHoy() });
   const personas = h('input', { type: 'number', min: 1, max: comercio.capacidad_maxima || 1, value: 1, style: 'width:90px' });
   const franjas = h('div', { class: 'franjas' });
-  const cierre = h('div');
   const nombre = h('input', { placeholder: 'Nombre de quien reserva', maxlength: 80 });
   const telefono = h('input', { placeholder: 'Teléfono (opcional)', maxlength: 40 });
-  const confirmar = h('button', { disabled: true, onclick: reservar }, 'Confirmar reserva');
+  const confirmar = h('button', { disabled: true, onclick: intentarReservar }, 'Confirmar reserva');
   const mensaje = h('p');
+  const zonaIngreso = h('div');
   const pasoReserva = h('div', { class: 'tarjeta', hidden: true },
     h('h2', { style: 'margin-top:0' }, '2. Elegí día y horario'),
     h('div', { class: 'fila' }, h('label', {}, '¿Para cuántas personas?', personas), h('label', {}, 'Día', fecha)),
     h('p', { class: 'suave' }, `Te asignamos automáticamente el lugar que mejor se ajuste (hasta ${comercio.capacidad_maxima} personas por reserva).`),
     h('p', { class: 'suave' }, 'Horarios disponibles'), franjas,
     h('h2', {}, '3. ¿A nombre de quién?'),
-    h('div', { class: 'fila' }, nombre, telefono, confirmar), mensaje);
+    h('div', { class: 'fila' }, nombre, telefono, confirmar), mensaje, zonaIngreso);
 
   async function cargarFranjas() {
     reserva.inicio = null;
@@ -152,17 +168,24 @@ async function mostrarComercio(slug) {
     } catch (error) { mostrarError(franjas, error); }
   }
 
+  function intentarReservar() {
+    if (!nombre.value.trim()) { mensaje.className = 'mensaje-error'; mensaje.textContent = 'Indicá a nombre de quién es la reserva'; return; }
+    mensaje.textContent = '';
+    if (sesion.usuario) return reservar();
+    zonaIngreso.replaceChildren(formularioIngreso({ alIngresar: () => { zonaIngreso.replaceChildren(); reservar(); } }));
+    return null;
+  }
+
   async function reservar() {
     confirmar.disabled = true;
     try {
       const turno = await api(`/api/comercios/${slug}/turnos`, { metodo: 'POST', cuerpo: {
         servicio_id: reserva.servicio.id, inicio: reserva.inicio, personas: Number(personas.value),
         cliente_nombre: nombre.value, cliente_telefono: telefono.value } });
-      guardarCodigo(turno.codigo);
       pasoReserva.replaceChildren(h('h2', { class: 'mensaje-ok', style: 'margin-top:0' }, '¡Reserva confirmada!'),
-        h('p', {}, `${turno.servicio} · ${turno.inicio.replace('T', ' ')} · para ${personas.value} · ${turno.plaza}`),
-        h('p', {}, 'Tu código: ', h('strong', {}, turno.codigo)),
-        h('a', { class: 'boton', href: '/' }, 'Ver mis turnos'));
+        h('p', {}, `${turno.servicio} · ${turno.inicio.replace('T', ' ')} · para ${personas.value}`),
+        h('p', {}, 'Tu lugar: ', h('strong', {}, turno.plaza)),
+        h('a', { class: 'boton', href: '/#mis-turnos' }, 'Ver mis turnos'));
     } catch (error) {
       mensaje.className = 'mensaje-error';
       mensaje.textContent = error.message;
@@ -179,7 +202,8 @@ async function mostrarComercio(slug) {
   }
 
   fecha.addEventListener('change', cargarFranjas);
-  personas.addEventListener('input', () => { if (personas.value && Number(personas.value) >= 1) cargarFranjas(); });
+  personas.addEventListener('input', () => { if (Number(personas.value) >= 1) cargarFranjas(); });
+  nombre.value = sesion.usuario?.nombre ?? '';
 
   const horarios = comercio.horarios.map((horario) => `${DIAS[horario.dia_semana]} ${horario.apertura}–${horario.cierre}`);
   app.replaceChildren(
@@ -197,8 +221,9 @@ async function mostrarComercio(slug) {
       servicio.descripcion && h('p', {}, servicio.descripcion),
       servicio.caracteristicas && h('p', { class: 'suave' }, servicio.caracteristicas),
       h('button', { onclick: () => elegirServicio(servicio) }, 'Reservar')))),
-    pasoReserva, cierre);
+    pasoReserva);
 }
 
+await cargarSesion();
 const slug = new URLSearchParams(location.search).get('c');
-if (slug) mostrarComercio(slug); else mostrarBuscador();
+if (slug) await mostrarComercio(slug); else await mostrarBuscador();

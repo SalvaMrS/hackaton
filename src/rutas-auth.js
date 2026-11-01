@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { errorHttp, hashearPassword, verificarPassword, iniciarSesion, cerrarSesion, usuarioActual } from './auth.js';
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const DESTINO_PERMITIDO = /^(\/panel\.html|\/\?c=[a-z0-9-]+)$/;
 const GOOGLE_AUTORIZAR = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN = 'https://oauth2.googleapis.com/token';
 
@@ -86,7 +87,7 @@ export function rutasAuth(app) {
   app.get('/api/auth/google', async (req, reply) => {
     if (!googleHabilitado()) throw errorHttp(404, 'google_deshabilitado', 'Google no está configurado');
     const estado = randomBytes(16).toString('hex');
-    const destino = req.query.destino === '/panel.html' ? '/panel.html' : '/';
+    const destino = DESTINO_PERMITIDO.test(req.query.destino ?? '') ? req.query.destino : '/';
     reply.setCookie('oauth_destino', destino, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
     reply.setCookie('oauth_estado', estado, { signed: true, httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
     const parametros = new URLSearchParams({
@@ -109,6 +110,6 @@ export function rutasAuth(app) {
     iniciarSesion(reply, buscarOCrearUsuarioGoogle(db, perfil));
     reply.clearCookie('oauth_estado', { path: '/' });
     reply.clearCookie('oauth_destino', { path: '/' });
-    return reply.redirect(req.cookies.oauth_destino === '/panel.html' ? '/panel.html' : '/');
+    return reply.redirect(DESTINO_PERMITIDO.test(req.cookies.oauth_destino ?? '') ? req.cookies.oauth_destino : '/');
   });
 }
