@@ -20,7 +20,7 @@ Requiere Node 26.12+ (usa `node:sqlite`, sin dependencias nativas).
 npm ci
 npm run semilla      # carga 11 comercios de ejemplo con fotos y movimiento en vivo (necesita internet la primera vez)
 npm start            # http://localhost:3000
-npm test             # 50 tests
+npm test             # 58 tests
 ```
 
 Variables en `~/.env` (nunca dentro del proyecto): `OPENAI_API_KEY` (asistente), `OPENAI_MODEL` (opcional), `SESSION_SECRET`, `PORT`, `DB_PATH`, `UPLOAD_DIR`.
