@@ -151,3 +151,10 @@ button, .boton { border-radius: 10px; font-weight: 500; transition: background .
 }
 .salon { touch-action: pan-x pan-y; } .plaza, .asa { touch-action: none; }
 @media (max-width: 380px) { .hero h1 { font-size: 1.55rem; } .segmentado button { padding: 7px 10px; } }
+
+.horarios-dia { display: grid; gap: 14px; }
+.periodo h4 { margin: 0 0 6px; font-size: 1rem; }
+.fila-hora { display: flex; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--borde); }
+.hora-etiqueta { flex: 0 0 46px; font-weight: 700; color: var(--suave); font-size: .9rem; }
+.fila-hora .franjas { flex: 1; gap: 6px; }
+@media (max-width: 720px) { .fila-hora .franjas button { flex: 1 1 20%; min-width: 0; padding: 10px 4px; } .hora-etiqueta { flex-basis: 40px; } }

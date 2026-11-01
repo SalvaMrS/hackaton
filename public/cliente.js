@@ -8,6 +8,18 @@ const ubicacion = leerUbicacionGuardada();
 const sesion = { usuario: null, googleHabilitado: false };
 let slugActual = null;
 const DIAS_A_EXPLORAR = 7;
+const PERIODOS = [['☀️ Mañana', 0, 12], ['🌤️ Tarde', 12, 20], ['🌙 Noche', 20, 24]];
+
+function agruparPorPeriodoYHora(lista) {
+  return PERIODOS.map(([titulo, desde, hasta]) => {
+    const porHora = new Map();
+    for (const franja of lista) {
+      const hora = Number(franja.inicio.slice(11, 13));
+      if (hora >= desde && hora < hasta) porHora.set(hora, [...(porHora.get(hora) ?? []), franja]);
+    }
+    return { titulo, filas: [...porHora] };
+  }).filter(({ filas }) => filas.length);
+}
 
 iniciarChat({ obtenerContexto: () => ({ ...ubicacion, slug: slugActual }) });
 
@@ -217,7 +229,7 @@ async function mostrarComercio(slug) {
     type: 'button', 'data-fecha': fechaHoy(dias), onclick: () => { fecha.value = fechaHoy(dias); marcarAtajos(); cargarFranjas(); },
   }, texto)));
   const marcarAtajos = () => atajos.querySelectorAll('button').forEach((boton) => boton.classList.toggle('activa', boton.dataset.fecha === fecha.value));
-  const franjas = h('div', { class: 'franjas' });
+  const franjas = h('div', { class: 'horarios-dia' });
   const nombre = h('input', { placeholder: 'Nombre de quien reserva', maxlength: 80 });
   const telefono = h('input', { placeholder: 'Teléfono (opcional)', maxlength: 40 });
   const confirmar = h('button', { disabled: true, onclick: intentarReservar }, 'Confirmar reserva');
@@ -240,7 +252,7 @@ async function mostrarComercio(slug) {
     const consulta = new URLSearchParams({ servicio_id: reserva.servicio.id, fecha: fecha.value, personas: personas.value });
     try {
       const lista = await api(`/api/comercios/${slug}/disponibilidad?${consulta}`);
-      franjas.replaceChildren(...(lista.length ? lista.map((franja) => h('button', {
+      const botonDeHorario = (franja) => h('button', {
         type: 'button',
         onclick: (evento) => {
           franjas.querySelectorAll('button').forEach((boton) => boton.classList.remove('elegida'));
@@ -248,7 +260,12 @@ async function mostrarComercio(slug) {
           reserva.inicio = franja.inicio;
           confirmar.disabled = false;
         },
-      }, franja.inicio.slice(11))) : [h('span', { class: 'suave' }, 'No hay lugar libre para esa cantidad de personas ese día.')]));
+      }, franja.inicio.slice(11));
+      franjas.replaceChildren(...(lista.length
+        ? agruparPorPeriodoYHora(lista).map(({ titulo, filas }) => h('div', { class: 'periodo' }, h('h4', {}, titulo),
+          ...filas.map(([hora, delaHora]) => h('div', { class: 'fila-hora' }, h('span', { class: 'hora-etiqueta' }, `${String(hora).padStart(2, '0')} h`),
+            h('div', { class: 'franjas' }, delaHora.map(botonDeHorario))))))
+        : [h('span', { class: 'suave' }, 'No hay lugar libre para esa cantidad de personas ese día.')]));
       return lista;
     } catch (error) { mostrarError(franjas, error); return []; }
   }
