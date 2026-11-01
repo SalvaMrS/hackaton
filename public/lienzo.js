@@ -75,7 +75,7 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
   function dibujarPlaza(plaza) {
     const personalizada = Boolean(plaza.color) && plaza.estado !== 'inactiva';
     const circulo = h('div', {
-      class: `plaza ${plaza.estado} ${personalizada ? 'personalizada' : ''} ${estado.seleccionada === plaza.id ? 'seleccionada' : ''}`,
+      class: `plaza ${plaza.estado} ${personalizada ? 'personalizada' : ''} ${/cancha/i.test(plaza.tipo) ? 'cancha' : ''} ${estado.seleccionada === plaza.id ? 'seleccionada' : ''}`,
       style: estiloPlaza(plaza, personalizada), title: plaza.nombre,
     }, h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`),
     estado.editando && estado.seleccionada === plaza.id ? crearAsaTamano(plaza, circulo) : null);
@@ -102,7 +102,7 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
   }
 
   function estiloPlaza(plaza, personalizada) {
-    const color = personalizada ? `background:${plaza.color};color:${colorDeTexto(plaza.color)};` : '';
+    const color = personalizada ? `background-color:${plaza.color};color:${colorDeTexto(plaza.color)};` : '';
     const radio = plaza.forma === 'rectangulo' ? 'border-radius:10px;' : 'border-radius:50%;';
     return `left:${plaza.x}%;top:${plaza.y}%;width:${plaza.ancho}cqw;height:${plaza.alto}cqw;${radio}${color}`;
   }

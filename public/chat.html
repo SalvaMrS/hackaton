@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Asistente de turnos</title>
+  <link rel="stylesheet" href="/chat.css">
+</head>
+<body>
+  <main class="chat">
+    <header class="cabecera">
+      <div class="avatar" aria-hidden="true">📅</div>
+      <div class="datos">
+        <h1>Asistente de turnos</h1>
+        <p>en línea</p>
+      </div>
+      <a class="volver" href="/">Volver</a>
+    </header>
+    <section id="mensajes" class="mensajes" aria-live="polite"></section>
+    <form id="formulario" class="barra-inferior">
+      <textarea id="entrada" rows="1" placeholder="Escribí un mensaje" autocomplete="off"></textarea>
+      <button id="enviar" class="boton-enviar" type="submit" aria-label="Enviar"></button>
+    </form>
+  </main>
+  <script type="module" src="/chat-pagina.js"></script>
+</body>
+</html>

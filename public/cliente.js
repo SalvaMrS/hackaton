@@ -56,6 +56,21 @@ function pedirUbicacion(alObtener, alFallar) {
     alFallar, { timeout: 8000 });
 }
 
+function resumirHorarios(horarios) {
+  const porRango = new Map();
+  for (const { dia_semana: dia, apertura, cierre } of horarios) {
+    const rango = `${apertura}–${cierre}`;
+    porRango.set(rango, [...(porRango.get(rango) ?? []), dia]);
+  }
+  return [...porRango].map(([rango, dias]) => {
+    const orden = [...dias].sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
+    const corrido = orden.every((dia, indice) => indice === 0 || (dia + 6) % 7 === ((orden[indice - 1] + 6) % 7) + 1);
+    const nombres = dias.length === 7 ? 'Todos los días'
+      : corrido && orden.length > 2 ? `${DIAS[orden[0]]} a ${DIAS[orden.at(-1)]}` : orden.map((dia) => DIAS[dia]).join(', ');
+    return `${nombres} ${rango}`;
+  });
+}
+
 function tarjetaComercio(comercio) {
   return h('a', { class: 'tarjeta', href: `?c=${comercio.slug}`, style: 'text-decoration:none;color:inherit' },
     comercio.imagen_url && h('img', { class: 'servicio-imagen', src: comercio.imagen_url, alt: comercio.nombre }),
@@ -206,7 +221,7 @@ async function mostrarComercio(slug) {
   personas.addEventListener('input', () => { if (Number(personas.value) >= 1) cargarFranjas(); });
   nombre.value = sesion.usuario?.nombre ?? '';
 
-  const horarios = comercio.horarios.map((horario) => `${DIAS[horario.dia_semana]} ${horario.apertura}–${horario.cierre}`);
+  const horarios = resumirHorarios(comercio.horarios);
   app.replaceChildren(
     h('a', { href: '/' }, '← Volver'),
     h('div', { class: 'portada', style: comercio.imagen_url ? `background-image:linear-gradient(#0000,#000a),url("${comercio.imagen_url}")` : '' },

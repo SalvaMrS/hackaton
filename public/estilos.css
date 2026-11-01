@@ -30,15 +30,9 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 .formulario { display:grid; gap:10px; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); align-items:end; margin-bottom:14px; }
 .centrado { max-width:380px; margin:8vh auto; }
 #chat-boton { position:fixed; right:18px; bottom:18px; border-radius:99px; padding:14px 20px; box-shadow:0 6px 20px #0003; z-index:20; }
-#chat-panel { position:fixed; right:18px; bottom:78px; width:min(380px,calc(100vw - 36px)); height:min(520px,70vh); background:var(--tarjeta); border:1px solid var(--borde); border-radius:14px; box-shadow:0 10px 30px #0003; display:none; flex-direction:column; z-index:20; }
-#chat-panel.abierto { display:flex; }
-#chat-mensajes { flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:8px; }
-.burbuja { max-width:85%; padding:8px 12px; border-radius:14px; white-space:pre-wrap; background:#eef0f6; align-self:flex-start; }
-.burbuja.usuario { background:var(--primario); color:#fff; align-self:flex-end; }
-#chat-form { display:flex; gap:6px; padding:10px; border-top:1px solid var(--borde); } #chat-form input { flex:1; }
 .etiqueta.en_curso { background:#fee2e2; color:#b91c1c; } .etiqueta.ausente { background:#e5e7eb; color:#374151; }
 .salon { container-type:inline-size; position:relative; width:100%; aspect-ratio:16/9; min-height:300px; background:#fff radial-gradient(#d9dce6 1px,transparent 1px) 0 0/22px 22px; border:2px dashed var(--borde); border-radius:14px; overflow:hidden; touch-action:none; }
-.plaza { position:absolute; width:9cqw; height:9cqw; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:clamp(.6rem,1.4cqw,1rem); line-height:1.15; color:#fff; font-weight:600; cursor:grab; user-select:none; box-shadow:0 3px 8px #0003; border:3px solid #fff; background:var(--estado); overflow:visible; }
+.plaza { position:absolute; width:9cqw; height:9cqw; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:clamp(.68rem,1.5cqw,1.05rem); line-height:1.15; color:#fff; font-weight:600; cursor:grab; user-select:none; box-shadow:0 3px 8px #0003; border:3px solid #fff; background:var(--estado); overflow:visible; }
 .plaza.arrastrando { cursor:grabbing; box-shadow:0 8px 20px #0005; z-index:5; }
 .plaza small { font-weight:400; opacity:.9; }
 .plaza.libre { --estado:#10b981; } .plaza.proximo { --estado:#eab308; color:#1b1f2a; } .plaza.en_hora { --estado:#f97316; }
@@ -53,7 +47,7 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 .tarjeta.oferta { border:2px solid #f59e0b; background:#fffbeb; position:relative; }
 .cinta-oferta { position:absolute; top:10px; right:10px; background:#f59e0b; color:#fff; font-weight:700; font-size:.78rem; padding:2px 10px; border-radius:99px; }
 .precio-tachado { text-decoration:line-through; color:var(--suave); margin-right:6px; } .precio-oferta { color:#b45309; font-weight:700; }
-.dos-columnas { display:grid; gap:14px; grid-template-columns:minmax(0,2fr) minmax(240px,1fr); align-items:start; }
+.dos-columnas { display:grid; gap:14px; grid-template-columns:minmax(0,3fr) minmax(250px,1fr); align-items:start; }
 @media (max-width:760px) { .dos-columnas { grid-template-columns:1fr; } }
 .guias { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 .guias line { stroke:#94a3b8; stroke-width:3; stroke-linecap:round; vector-effect:non-scaling-stroke; }
@@ -64,3 +58,7 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 .plaza.seleccionada { outline:4px solid #1b1f2a55; }
 .lista-proximos { display:grid; gap:6px; margin:6px 0 0; padding:0; list-style:none; } .lista-proximos li { padding:6px 8px; background:#f3f4f8; border-radius:8px; font-size:.9rem; }
 .plaza .asa { margin:0; right:-9px; bottom:-9px; left:auto; top:auto; cursor:nwse-resize; background:#1b1f2a; }
+
+.panel main { max-width:1240px; }
+.plaza.cancha { background-image:linear-gradient(90deg,transparent calc(50% - 1px),#ffffffcc calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px)),radial-gradient(circle at 50% 50%,transparent 0 1.6cqw,#ffffffcc 1.6cqw 1.9cqw,transparent 1.9cqw); box-shadow:inset 0 0 0 2px #ffffffcc,0 3px 8px #0003; }
+a.tarjeta:hover { box-shadow:0 6px 18px #1b1f2a1a; transform:translateY(-2px); } a.tarjeta { transition:box-shadow .15s,transform .15s; }

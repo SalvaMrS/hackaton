@@ -23,7 +23,7 @@ export function detalleComercio(db, slug) {
   return {
     ...comercio,
     capacidad_maxima: db.prepare('SELECT COALESCE(MAX(capacidad), 0) AS maxima FROM plazas WHERE comercio_id = ? AND activo = 1').get(comercio.id).maxima,
-    servicios: db.prepare('SELECT id, nombre, descripcion, caracteristicas, precio_centavos, duracion_min, imagen_url, oferta, precio_oferta_centavos FROM servicios WHERE comercio_id = ? AND activo = 1 ORDER BY nombre').all(comercio.id),
+    servicios: db.prepare('SELECT id, nombre, descripcion, caracteristicas, precio_centavos, duracion_min, imagen_url, oferta, precio_oferta_centavos FROM servicios WHERE comercio_id = ? AND activo = 1 ORDER BY oferta DESC, nombre').all(comercio.id),
     horarios: db.prepare('SELECT dia_semana, apertura, cierre FROM horarios WHERE comercio_id = ? ORDER BY dia_semana, apertura').all(comercio.id),
   };
 }
