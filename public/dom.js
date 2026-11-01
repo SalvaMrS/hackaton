@@ -25,6 +25,12 @@ export async function api(ruta, { metodo = 'GET', cuerpo } = {}) {
   return datos;
 }
 
+export function botonGoogleDeshabilitado() {
+  return h('div', { class: 'google-pendiente' },
+    h('button', { type: 'button', class: 'secundario', disabled: true }, 'Continuar con Google'),
+    h('span', { class: 'suave' }, 'Próximamente: el ingreso con Google queda pendiente de implementar porque el servidor aún no cuenta con certificado SSL (HTTPS), requisito de Google.'));
+}
+
 export const dinero = (centavos) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(centavos / 100);
 export const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
 

@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -46,6 +46,7 @@ function formularioIngreso({ alIngresar }) {
       h('button', { type: 'submit' }, 'Ingresar'),
       h('button', { type: 'button', class: 'secundario', onclick: enviar('/api/auth/registro') }, 'Crear cuenta'),
       sesion.googleHabilitado && h('a', { class: 'boton secundario', href: `/api/auth/google?destino=${destino}` }, 'Continuar con Google')),
+    !sesion.googleHabilitado && botonGoogleDeshabilitado(),
     mensaje);
 }
 

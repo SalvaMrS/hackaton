@@ -14,7 +14,7 @@ function validarCredenciales({ email, password }) {
 }
 
 function googleHabilitado() {
-  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI);
+  return process.env.GOOGLE_AUTH_ACTIVO === '1' && Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET && process.env.GOOGLE_REDIRECT_URI);
 }
 
 async function canjearCodigoGoogle(codigo) {
