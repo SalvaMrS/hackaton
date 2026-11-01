@@ -29,6 +29,9 @@ function leerReserva(body) {
 export function rutasPublicas(app) {
   const { db } = app;
 
+  app.get('/api/rubros', async () =>
+    db.prepare('SELECT MIN(rubro) AS rubro FROM comercios GROUP BY lower(rubro) ORDER BY lower(rubro)').all().map(({ rubro }) => rubro));
+
   app.get('/api/comercios', async (req) => listarComercios(db, req.query));
 
   app.get('/api/comercios/:slug', async (req) => detalleComercio(db, req.params.slug));

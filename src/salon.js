@@ -32,7 +32,7 @@ function turnosVigentes(db, comercioId, ahora) {
 }
 
 export function estadoDelSalon(db, comercio, ahora = ahoraLocal(), { incluirInactivas = false } = {}) {
-  const plazas = db.prepare('SELECT id, nombre, tipo, descripcion, capacidad, activo, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND (activo = 1 OR ?) ORDER BY id').all(comercio.id, incluirInactivas ? 1 : 0);
+  const plazas = db.prepare('SELECT id, nombre, tipo, descripcion, forma, ancho, alto, color, capacidad, activo, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND (activo = 1 OR ?) ORDER BY id').all(comercio.id, incluirInactivas ? 1 : 0);
   const todosLosTurnos = turnosVigentes(db, comercio.id, ahora)
     .map((turno) => ({ ...turno, ...situacionDelTurno(turno, comercio, ahora) }));
   const turnos = todosLosTurnos.filter((turno) => turno.situacion !== 'proximo' || turno.minutos <= comercio.aviso_min);

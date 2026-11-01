@@ -53,3 +53,19 @@ export function imagenOpcional(valor, campo) {
   }
   return valor;
 }
+
+export function numeroEnRango(valor, campo, min, max) {
+  const numero = Number(valor);
+  if (!Number.isFinite(numero) || numero < min || numero > max) {
+    throw errorHttp(400, 'campo_invalido', `${campo} debe estar entre ${min} y ${max}`);
+  }
+  return numero;
+}
+
+const COLOR_HEX = /^#[0-9a-fA-F]{6}$/;
+
+export function colorOpcional(valor, campo) {
+  if (valor == null || valor === '') return '';
+  if (typeof valor !== 'string' || !COLOR_HEX.test(valor)) throw errorHttp(400, 'campo_invalido', `${campo} debe ser un color #RRGGBB`);
+  return valor;
+}

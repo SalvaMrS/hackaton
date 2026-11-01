@@ -36,7 +36,7 @@ export function listarComercios(db, { q, rubro, lat, lng }) {
   const filas = db.prepare(
     `SELECT c.*, (SELECT group_concat(s.nombre, ', ') FROM servicios s WHERE s.comercio_id = c.id AND s.activo = 1) AS servicios
      FROM comercios c
-     WHERE (? = '' OR c.rubro = ?)
+     WHERE (? = '' OR lower(c.rubro) = lower(?))
        AND (lower(c.nombre) LIKE ? OR lower(c.rubro) LIKE ? OR EXISTS (
          SELECT 1 FROM servicios s WHERE s.comercio_id = c.id AND s.activo = 1 AND lower(s.nombre) LIKE ?))`,
   ).all(rubro ?? '', rubro ?? '', patron, patron, patron);

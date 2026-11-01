@@ -1,6 +1,6 @@
 import { errorHttp, exigirUsuario, exigirComercio } from './auth.js';
 import {
-  textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional, hora, slugDesde, imagenOpcional,
+  textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional, hora, slugDesde, imagenOpcional, numeroEnRango, colorOpcional,
 } from './validacion.js';
 
 function leerComercio(body) {
@@ -49,10 +49,16 @@ function leerServicio(body) {
   };
 }
 
+const FORMAS_PLAZA = ['circulo', 'rectangulo'];
+
 function leerPlaza(body) {
   return {
     nombre: textoRequerido(body.nombre, 'nombre', 80),
     tipo: textoOpcional(body.tipo, 'tipo', 40),
+    forma: FORMAS_PLAZA.includes(body.forma) ? body.forma : 'circulo',
+    ancho: numeroEnRango(body.ancho ?? 9, 'ancho', 3, 70),
+    alto: numeroEnRango(body.alto ?? 9, 'alto', 3, 70),
+    color: colorOpcional(body.color, 'color'),
     descripcion: textoOpcional(body.descripcion, 'descripcion'),
     capacidad: enteroEnRango(body.capacidad ?? 1, 'capacidad', 1, 500),
     activo: body.activo === false || body.activo === 0 ? 0 : 1,
@@ -157,7 +163,7 @@ export function rutasComercio(app) {
   });
   registrarCrud(app, {
     ruta: '/api/plazas', tabla: 'plazas', orden: 'nombre', leer: leerPlaza,
-    columnas: ['nombre', 'tipo', 'descripcion', 'capacidad', 'activo'],
+    columnas: ['nombre', 'tipo', 'descripcion', 'forma', 'ancho', 'alto', 'color', 'capacidad', 'activo'],
   });
   registrarCrud(app, {
     ruta: '/api/guias', tabla: 'guias', orden: 'id', leer: leerGuia, columnas: ['x1', 'y1', 'x2', 'y2'],
