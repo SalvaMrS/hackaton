@@ -32,9 +32,9 @@ const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0
 
 function coincide(comercio, { q, rubro }) {
   if (rubro && normalizar(comercio.rubro) !== normalizar(rubro)) return false;
-  const consulta = normalizar(q);
-  if (!consulta) return true;
-  return normalizar(`${comercio.nombre} ${comercio.rubro} ${comercio.servicios ?? ''}`).includes(consulta);
+  const palabras = normalizar(q).split(/\s+/).filter(Boolean).map((palabra) => palabra.replace(/s$/, ''));
+  const texto = normalizar(`${comercio.nombre} ${comercio.rubro} ${comercio.servicios ?? ''}`);
+  return palabras.every((palabra) => texto.includes(palabra));
 }
 
 export function listarComercios(db, { q, rubro, lat, lng }) {

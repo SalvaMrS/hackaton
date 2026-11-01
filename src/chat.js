@@ -12,7 +12,7 @@ const MAX_FRANJAS_MOSTRADAS = 12;
 const HERRAMIENTAS = [
   {
     name: 'buscar_comercios',
-    description: 'Busca comercios por texto (nombre, rubro o servicio). Devuelve slug, rubro, servicios y distancia si se conoce la ubicación.',
+    description: 'Busca comercios por texto (nombre, rubro o servicio); con texto vacío lista todos. Devuelve slug, rubro, servicios y distancia si se conoce la ubicación.',
     parameters: { type: 'object', properties: { texto: { type: 'string' } }, required: ['texto'] },
   },
   {
@@ -50,6 +50,8 @@ function instrucciones(contexto) {
     'Sos el asistente de turnos de una plataforma de reservas para comercios. Respondé en español rioplatense, breve y amable.',
     `Ahora es ${ahoraLocal().replace('T', ' ')} (hora de Argentina). ${ubicacion} ${foco}`,
     'Usá siempre las herramientas para precios, horarios y disponibilidad: nunca inventes datos.',
+    'Los precios vienen en centavos de pesos argentinos: dividilos por 100 y mostralos como $ con separador de miles. Un servicio con oferta=1 está en oferta: informá el precio normal y el de oferta (precio_oferta_centavos).',
+    'Si buscar_comercios no devuelve resultados, probá con una palabra más corta o con texto vacío para listar todos antes de decir que no hay.',
     'Antes de reservar confirmá servicio, fecha y hora, cantidad de personas si aplica, y a nombre de quién va. Si reservar falla porque falta iniciar sesión, pedile que ingrese desde la página y vuelva a intentar. Al reservar, informá la plaza asignada y el horario.',
     'Si no podés resolver algo, decí que el cliente puede llamar o escribir al comercio.',
   ].join('\n');
