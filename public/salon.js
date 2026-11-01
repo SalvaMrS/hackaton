@@ -126,6 +126,7 @@ export function seccionPlazas() {
   const lienzo = crearLienzo({ alElegirPlaza: elegir, mostrarInactivas: true });
   const interruptor = h('button', { onclick: alternarEdicion }, '✏ Habilitar edición');
   const botonLinea = h('button', { class: 'secundario', hidden: true, onclick: () => lienzo.agregarGuia() }, '＋ Línea guía');
+  const botonNueva = h('button', { hidden: true, onclick: agregarRapido }, '＋ Nueva plaza');
 
   const entradas = {
     nombre: h('input', { required: true, maxlength: 80 }),
@@ -177,8 +178,27 @@ export function seccionPlazas() {
     editando = !editando;
     interruptor.textContent = editando ? '✔ Terminar edición' : '✏ Habilitar edición';
     botonLinea.hidden = !editando;
+    botonNueva.hidden = !editando;
     lienzo.editar(editando);
     if (editando) { lateral.replaceChildren(formulario); cargarFormulario(null); } else lateral.replaceChildren(pistaPlaza());
+  }
+
+  async function crearEnEspacioLibre(cuerpo) {
+    const creada = await api('/api/plazas', { metodo: 'POST', cuerpo });
+    const { x, y } = lienzo.espacioLibre(cuerpo.ancho, cuerpo.alto);
+    await api(`/api/plazas/${creada.id}/posicion`, { metodo: 'PATCH', cuerpo: { x, y } });
+    await lienzo.recargar();
+    return creada.id;
+  }
+
+  async function agregarRapido() {
+    try {
+      const id = await crearEnEspacioLibre({
+        nombre: `Plaza ${lienzo.cantidad() + 1}`, tipo: '', descripcion: '', capacidad: 2, forma: 'circulo', ancho: 9, alto: 9, color: '', activo: 1,
+      });
+      mensaje.textContent = '';
+      lienzo.seleccionar(id);
+    } catch (error) { mostrarError(mensaje, error); }
   }
 
   async function guardar(evento) {
@@ -190,8 +210,8 @@ export function seccionPlazas() {
       color: Number(entradas.colorPropio.value) === 1 ? entradas.color.value : '',
     };
     try {
-      await api(plazaEnFormulario ? `/api/plazas/${plazaEnFormulario.id}` : '/api/plazas',
-        { metodo: plazaEnFormulario ? 'PUT' : 'POST', cuerpo });
+      if (plazaEnFormulario) await api(`/api/plazas/${plazaEnFormulario.id}`, { metodo: 'PUT', cuerpo });
+      else await crearEnEspacioLibre(cuerpo);
       mensaje.textContent = '';
       cargarFormulario(null);
       await lienzo.recargar();
@@ -208,7 +228,7 @@ export function seccionPlazas() {
   }
 
   return h('div', {},
-    h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Plazas'), interruptor, botonLinea),
-    h('p', { class: 'suave' }, 'Sin edición habilitada podés tocar una plaza para ver sus características. Con edición, arrastrá los círculos, agregá plazas y líneas guía.'),
+    h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Plazas'), interruptor, botonNueva, botonLinea),
+    h('p', { class: 'suave' }, 'Tocá una plaza para ver sus características. Con la edición habilitada podés crear plazas nuevas, editar las existentes, arrastrarlas, cambiar su tamaño y agregar líneas guía, todo desde acá.'),
     leyenda(), lienzo.mensaje, mensaje, h('div', { class: 'dos-columnas' }, lienzo.mapa, lateral));
 }

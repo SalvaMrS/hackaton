@@ -183,5 +183,24 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
 
   recargar();
   const refresco = setInterval(() => { if (mapa.isConnected) recargar(); else clearInterval(refresco); }, REFRESCO_MS);
-  return { mapa, mensaje, recargar, editar, agregarGuia, deseleccionar: () => { estado.seleccionada = null; dibujar(); } };
+  function espacioLibre(ancho = 9, alto = 9) {
+    const ALTO_MAPA_CQW = 56.25;
+    const libre = (x, y) => estado.plazas.every((plaza) =>
+      Math.abs(x - plaza.x) >= (plaza.ancho + ancho) / 2 + 1.5
+      || Math.abs(((y - plaza.y) / 100) * ALTO_MAPA_CQW) >= (plaza.alto + alto) / 2 + 1.5);
+    for (let y = 14; y <= 86; y += 12) {
+      for (let x = 10; x <= 90; x += 10) if (libre(x, y)) return { x, y };
+    }
+    return { x: 50, y: 50 };
+  }
+
+  function seleccionar(id) {
+    const plaza = estado.plazas.find((candidata) => candidata.id === id);
+    if (!plaza) return;
+    estado.seleccionada = id;
+    dibujar();
+    alElegirPlaza(plaza);
+  }
+
+  return { mapa, mensaje, recargar, editar, agregarGuia, espacioLibre, seleccionar, cantidad: () => estado.plazas.length, deseleccionar: () => { estado.seleccionada = null; dibujar(); } };
 }
