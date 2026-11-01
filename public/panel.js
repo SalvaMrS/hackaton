@@ -1,5 +1,6 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba, etiquetarTablas, avisar } from './dom.js';
 import { PLANTILLAS, plantillaPara } from './plantillas.js';
+import { seccionEstadisticas } from './estadisticas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
 const app = document.getElementById('app');
@@ -204,6 +205,7 @@ const SECCIONES = {
   Salón: seccionSalon,
   Recepción: seccionRecepcion,
   Agenda: seccionAgenda,
+  Estadísticas: seccionEstadisticas,
   Servicios: () => conTiposDePlaza(seccionCrud({
     ruta: '/api/servicios', titulo: 'Catálogo de servicios',
     campos: [

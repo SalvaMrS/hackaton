@@ -223,3 +223,20 @@ main:focus { outline: none; }
 .resumen-dato::before { content: ''; width: 10px; height: 10px; border-radius: 50%; background: var(--color); } .resumen-dato b { font-size: 1rem; }
 
 td .fila { gap: 10px; } td .peligro { margin-left: 6px; }
+
+/* ===== Estadísticas ===== */
+.kpis { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin: 14px 0; }
+.kpi { background: #fff; border: 1px solid var(--borde); border-top: 4px solid var(--color); border-radius: 14px; padding: 12px 14px; display: grid; gap: 2px; box-shadow: var(--sombra); }
+.kpi-titulo { font-size: .85rem; color: var(--suave); } .kpi-valor { font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ocupacion { background: #fff; border: 1px solid var(--borde); border-radius: 14px; padding: 14px; margin-bottom: 14px; display: grid; gap: 8px; }
+.ocupacion-texto { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.ocupacion-barra { height: 14px; background: #fde68a; border-radius: 99px; overflow: hidden; } .ocupacion-barra > div { height: 100%; background: #10b981; border-radius: 99px; transition: width .4s; }
+.dias-barras { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; align-items: end; height: 190px; margin-bottom: 8px; }
+.dia-barra { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 4px; height: 100%; font-size: .78rem; }
+.dia-total { font-weight: 700; font-variant-numeric: tabular-nums; } .columna { width: min(46px, 100%); display: flex; flex-direction: column-reverse; border-radius: 8px 8px 4px 4px; overflow: hidden; min-height: 4px; background: #e5e7eb; }
+.tramo-ocupado { background: #10b981; } .tramo-falta { background: #f59e0b; } .tramo-otro { background: #9ca3af; }
+.dos-listas { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin: 14px 0; }
+.ranking { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; } .ranking li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; background: #f3f4f8; border-radius: 8px; }
+.etiqueta.estado-ocupado { background: #d1fae5; color: #047857; } .etiqueta.estado-falta { background: #fef3c7; color: #92400e; } .etiqueta.estado-cancelado { background: #e5e7eb; color: #374151; } .etiqueta.estado-ausente { background: #fee2e2; color: #b91c1c; }
+.tabla-turnos { margin-top: 10px; } .vacio-simple { padding: 20px; text-align: center; background: #fff; border: 2px dashed var(--borde); border-radius: 14px; }
+@media (max-width: 720px) { .kpis { grid-template-columns: repeat(2, 1fr); } .kpi-valor { font-size: 1.7rem; } .dias-barras { height: 160px; gap: 4px; } }

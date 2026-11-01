@@ -30,6 +30,7 @@ Las consultas por WhatsApp, teléfono o en persona se pierden. Esta plataforma l
 - Salón en vivo con seis estados por color: libre, reserva próxima, hora de llegada, demorado, no se presentó y en atención.
 - Recepción: buscar al cliente y ver a qué plaza ir y cuánto tarda o se demora.
 - Agenda del día con estados y acciones (llegó, atendido, cancelar).
+- Estadísticas: turnos totales, ocupados, que faltan, cancelados y ausentes; ocupación, próximos 7 días, servicios y plazas más usados, y detalle filtrable.
 - Catálogo de servicios con imagen, precio, duración, características, tipo de plaza y ofertas resaltadas.
 - Plazas con forma, tamaño, color, descripción y capacidad; editor del salón con arrastre, cambio de tamaño y líneas guía.
 - Perfil con portada, rubro libre con autocompletado, horarios por día y tiempos configurables (aviso, tolerancia, no se presentó).

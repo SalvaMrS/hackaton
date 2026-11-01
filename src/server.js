@@ -12,6 +12,7 @@ import { rutasPublicas } from './rutas-publicas.js';
 import { rutasSalon } from './salon.js';
 import { rutasImagenes, DIRECTORIO_SUBIDAS } from './imagenes.js';
 import { rutasGeocodificar } from './geocodificar.js';
+import { rutasEstadisticas } from './estadisticas.js';
 
 const publico = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -27,6 +28,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   app.register(async (instancia) => rutasSalon(instancia));
   app.register(async (instancia) => rutasImagenes(instancia));
   app.register(async (instancia) => rutasGeocodificar(instancia));
+  app.register(async (instancia) => rutasEstadisticas(instancia));
 
   app.get('/api/salud', async () => ({ ok: true }));
 
