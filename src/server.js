@@ -1,13 +1,18 @@
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
+import fastifyCookie from '@fastify/cookie';
+import { randomBytes } from 'node:crypto';
 import { abrirBaseDeDatos } from './db.js';
+import { rutasAuth } from './rutas-auth.js';
 
 const publico = fileURLToPath(new URL('../public', import.meta.url));
 
 export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   const app = Fastify({ logger: { redact: ['req.headers.cookie', 'req.headers.authorization'] } });
   app.decorate('db', db);
+  app.register(fastifyCookie, { secret: process.env.SESSION_SECRET ?? randomBytes(32).toString('hex') });
+  app.register(async (instancia) => rutasAuth(instancia));
 
   app.get('/api/salud', async () => ({ ok: true }));
 
