@@ -58,7 +58,7 @@ async function mostrarComercio(slug) {
   }
   const reserva = { servicio: null, inicio: null };
   const fecha = h('input', { type: 'date', value: fechaHoy(), min: fechaHoy() });
-  const personas = h('input', { type: 'number', min: 1, max: 50, value: 1, style: 'width:80px' });
+  const personas = h('input', { type: 'number', min: 1, max: comercio.capacidad_maxima || 1, value: 1, style: 'width:90px' });
   const franjas = h('div', { class: 'franjas' });
   const cierre = h('div');
   const nombre = h('input', { placeholder: 'Nombre de quien reserva', maxlength: 80 });
@@ -67,7 +67,8 @@ async function mostrarComercio(slug) {
   const mensaje = h('p');
   const pasoReserva = h('div', { class: 'tarjeta', hidden: true },
     h('h2', { style: 'margin-top:0' }, '2. Elegí día y horario'),
-    h('div', { class: 'fila' }, h('label', {}, 'Día', fecha), h('label', {}, 'Personas', personas)),
+    h('div', { class: 'fila' }, h('label', {}, '¿Para cuántas personas?', personas), h('label', {}, 'Día', fecha)),
+    h('p', { class: 'suave' }, `Te asignamos automáticamente el lugar que mejor se ajuste (hasta ${comercio.capacidad_maxima} personas por reserva).`),
     h('p', { class: 'suave' }, 'Horarios disponibles'), franjas,
     h('h2', {}, '3. ¿A nombre de quién?'),
     h('div', { class: 'fila' }, nombre, telefono, confirmar), mensaje);
@@ -86,7 +87,7 @@ async function mostrarComercio(slug) {
           reserva.inicio = franja.inicio;
           confirmar.disabled = false;
         },
-      }, franja.inicio.slice(11))) : [h('span', { class: 'suave' }, 'No hay horarios libres ese día.')]));
+      }, franja.inicio.slice(11))) : [h('span', { class: 'suave' }, 'No hay lugar libre para esa cantidad de personas ese día.')]));
     } catch (error) { mostrarError(franjas, error); }
   }
 
@@ -97,7 +98,7 @@ async function mostrarComercio(slug) {
         servicio_id: reserva.servicio.id, inicio: reserva.inicio, personas: Number(personas.value),
         cliente_nombre: nombre.value, cliente_telefono: telefono.value } });
       pasoReserva.replaceChildren(h('h2', { class: 'mensaje-ok', style: 'margin-top:0' }, '¡Reserva confirmada!'),
-        h('p', {}, `${turno.servicio} · ${turno.inicio.replace('T', ' ')} · ${turno.plaza}`),
+        h('p', {}, `${turno.servicio} · ${turno.inicio.replace('T', ' ')} · para ${personas.value} · ${turno.plaza}`),
         h('p', {}, 'Tu código: ', h('strong', {}, turno.codigo)));
     } catch (error) {
       mensaje.className = 'mensaje-error';
@@ -115,7 +116,7 @@ async function mostrarComercio(slug) {
   }
 
   fecha.addEventListener('change', cargarFranjas);
-  personas.addEventListener('change', cargarFranjas);
+  personas.addEventListener('input', () => { if (personas.value && Number(personas.value) >= 1) cargarFranjas(); });
 
   const horarios = comercio.horarios.map((horario) => `${DIAS[horario.dia_semana]} ${horario.apertura}–${horario.cierre}`);
   app.replaceChildren(
