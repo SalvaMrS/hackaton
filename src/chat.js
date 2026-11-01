@@ -88,7 +88,7 @@ function instrucciones(contexto) {
     `Ahora es ${fechaConDia(ahoraLocal())} (hora de Argentina). Resolvé "hoy", "mañana", "el viernes" con esta fecha. ${ubicacion} ${sesion} ${foco}`,
     'GUION: guiá al cliente con un ida y vuelta, UNA pregunta por mensaje. Averiguá en este orden lo que falte: 1) qué busca (servicio o rubro) y características que le importen, 2) para qué día y en qué momento u horario, 3) cuántas personas, 4) preferencias (más cerca, oferta). En cuanto sepas servicio y día, llamá a buscar_turnos_cercanos y proponé como máximo 3 opciones con comercio, distancia (si la hay), servicio, precio y 3 o 4 horarios. Después cerrá la elección y confirmá el resumen antes de reservar.',
     'RESERVAS: antes de llamar a reservar mostrá el resumen (comercio, servicio, día y hora, personas, precio y a nombre de quién) y preguntá "¿Confirmo?". Al reservar informá el lugar asignado (plaza) y la dirección. Si el horario ya no está, ofrecé otros. Para cancelar: listá con mis_turnos, confirmá cuál y recién ahí llamá a cancelar_turno. Para cambiar un turno: reservá el nuevo y después cancelá el viejo, con confirmación.',
-    'PRECIOS: son fijos. Informalos exactamente como los devuelven las herramientas (texto con $), sin redondear ni calcular. No hay regateo ni descuentos: si piden rebaja respondé amable que los precios son fijos, y solo mencioná las ofertas publicadas (oferta = true, con precio_oferta).',
+    'PRECIOS: son fijos. Informalos exactamente como los devuelven las herramientas (texto con $), sin redondear ni calcular. No hay regateo ni descuentos: si piden rebaja respondé amable que los precios son fijos, y solo mencioná las ofertas publicadas (en_oferta = true). Informá SIEMPRE y en todos los mensajes el mismo precio_a_pagar del servicio elegido; si está en oferta, aclarala una vez con el precio normal tachado (precio_normal_sin_oferta).',
     'DATOS: usá siempre las herramientas para precios, horarios y disponibilidad; nunca inventes. Identificá el comercio por su slug (o nombre) y el servicio por su nombre exacto; nunca uses ids numéricos de servicio. Si buscar_comercios no devuelve resultados, probá con una palabra más corta o con texto vacío.',
     'FORMATO: mensajes cortos, texto plano con saltos de línea, sin títulos ni listas con guiones largos. Para resaltar usá *un asterisco* a cada lado (nunca doble) solo en una palabra o frase corta, por ejemplo *Fútbol 5 La Terraza*; no uses asteriscos en listas ni en líneas con dos puntos. Podés usar algún emoji. Al final de tu mensaje, cuando convenga ofrecer opciones tocables, agregá UNA última línea con este formato exacto: [Opciones: Hoy | Mañana | Esta semana] (máximo 4 opciones cortas, sin repetir lo que ya está en el texto).',
     'Si no podés resolver algo, decí que puede llamar o escribir al comercio (teléfono en ver_comercio).',
@@ -111,9 +111,9 @@ function servicioParaModelo(servicio) {
     descripcion: servicio.descripcion,
     caracteristicas: servicio.caracteristicas,
     duracion_min: servicio.duracion_min,
-    precio: precioTexto(servicio.precio_centavos),
-    oferta: Boolean(servicio.oferta),
-    precio_oferta: servicio.oferta ? precioTexto(servicio.precio_oferta_centavos) : null,
+    precio_a_pagar: precioTexto(servicio.oferta ? servicio.precio_oferta_centavos : servicio.precio_centavos),
+    en_oferta: Boolean(servicio.oferta),
+    precio_normal_sin_oferta: servicio.oferta ? precioTexto(servicio.precio_centavos) : null,
   };
 }
 

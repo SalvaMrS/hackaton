@@ -39,7 +39,7 @@ const cantidadDeTurnos = (db) => db.prepare('SELECT COUNT(*) AS total FROM turno
 describe('asistente', () => {
   it('informa los precios como texto con $ y no en centavos', async () => {
     const comercio = await ejecutar(prepararBase(), 'ver_comercio', { slug: 'cancha-test' });
-    assert.match(comercio.servicios[0].precio, /\$\s?20\.000/);
+    assert.match(comercio.servicios[0].precio_a_pagar, /\$\s?20\.000/);
     assert.ok(!JSON.stringify(comercio).includes('2000000'));
   });
 
