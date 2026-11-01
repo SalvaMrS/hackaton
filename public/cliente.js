@@ -1,9 +1,10 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario,
+  leerUbicacionGuardada, formularioDireccion, pedirUbicacionDelNavegador } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
 const barra = document.getElementById('acciones-barra');
-const ubicacion = { lat: null, lng: null };
+const ubicacion = leerUbicacionGuardada();
 const sesion = { usuario: null, googleHabilitado: false };
 let slugActual = null;
 
@@ -50,12 +51,6 @@ function formularioIngreso({ alIngresar, titulo = 'Ingresá para confirmar tu re
     mensaje);
 }
 
-function pedirUbicacion(alObtener, alFallar) {
-  if (!navigator.geolocation) return alFallar();
-  navigator.geolocation.getCurrentPosition(
-    ({ coords }) => { ubicacion.lat = coords.latitude; ubicacion.lng = coords.longitude; alObtener(); },
-    alFallar, { timeout: 8000 });
-}
 
 function resumirHorarios(horarios) {
   const porRango = new Map();
@@ -139,20 +134,35 @@ async function mostrarBuscador() {
     } catch (error) { mostrarError(estado, error); }
   }
 
+  const ubicacionTexto = h('p', { class: 'suave' });
+  const zonaDireccion = h('div');
+  const fijarUbicacion = (nueva) => {
+    Object.assign(ubicacion, nueva);
+    zonaDireccion.replaceChildren();
+    ubicacionTexto.textContent = nueva.nombre ? `📍 Ordenado por cercanía a: ${nueva.nombre}` : '📍 Ordenado por cercanía a tu ubicación';
+    buscar();
+  };
+  const pedirDireccion = (aviso) => {
+    ubicacionTexto.textContent = aviso;
+    zonaDireccion.replaceChildren(formularioDireccion({ alObtener: fijarUbicacion }));
+  };
+  const sinGeolocalizacion = () => pedirDireccion('Tu navegador no puede ubicarte en este sitio. Escribí tu dirección o barrio para ver lo más cercano (también podés buscar sin ubicación):');
   const usarUbicacion = () => {
-    estado.textContent = 'Buscando tu ubicación…';
-    pedirUbicacion(buscar, () => { estado.textContent = 'Sin tu ubicación no podemos ordenar por cercanía, pero podés buscar igual.'; });
+    ubicacionTexto.textContent = 'Buscando tu ubicación…';
+    pedirUbicacionDelNavegador({ alObtener: fijarUbicacion, alFallar: sinGeolocalizacion });
   };
 
   app.replaceChildren(
     h('h1', {}, 'Reservá turnos cerca tuyo'),
     h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
       texto, h('button', { type: 'submit' }, 'Buscar'),
-      h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí')),
-    chips, estado, resultados, sesion.usuario && seccionMisTurnos());
+      h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí'),
+      h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección')),
+    chips, ubicacionTexto, zonaDireccion, estado, resultados, sesion.usuario && seccionMisTurnos());
   cargarRubros();
   buscar();
-  pedirUbicacion(buscar, () => { estado.textContent = 'Activá tu ubicación para ver primero lo más cercano. También podés buscar sin ella.'; });
+  if (ubicacion.lat != null) fijarUbicacion(ubicacion);
+  else pedirUbicacionDelNavegador({ alObtener: fijarUbicacion, alFallar: sinGeolocalizacion });
 }
 
 async function mostrarComercio(slug) {

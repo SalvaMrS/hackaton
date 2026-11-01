@@ -1,4 +1,4 @@
-import { h, api } from "./dom.js";
+import { h, api, leerUbicacionGuardada, formularioDireccion, pedirUbicacionDelNavegador } from "./dom.js";
 
 const MENSAJE_INICIAL = "Hola! Soy el asistente de turnos. Puedo buscar comercios cerca tuyo, mostrarte precios y horarios libres, y reservar por vos.";
 const RESPUESTAS_RAPIDAS = [
@@ -125,16 +125,14 @@ function crearIconoEnviar() {
 const estado = document.getElementById("estado");
 
 function pedirUbicacion() {
-  if (!navigator.geolocation) return;
-  navigator.geolocation.getCurrentPosition(
-    ({ coords }) => {
-      try {
-        localStorage.setItem("ubicacion", JSON.stringify({ lat: coords.latitude, lng: coords.longitude }));
-      } catch { /* sin almacenamiento: se usa solo en esta consulta */ }
-      actualizarEstado();
-    },
-    () => actualizarEstado(),
-    { timeout: 10000 },
+  pedirUbicacionDelNavegador({ alObtener: () => actualizarEstado(), alFallar: () => mostrarDireccion() });
+}
+
+function mostrarDireccion() {
+  estado.replaceChildren(
+    h("span", {}, "Escribí tu dirección o barrio:"),
+    formularioDireccion({ alObtener: () => actualizarEstado() }),
+    h("button", { type: "button", onclick: () => actualizarEstado() }, "Cancelar"),
   );
 }
 
@@ -148,17 +146,11 @@ async function actualizarEstado() {
     conUbicacion
       ? h("span", { class: "ok" }, "📍 Ubicación activada")
       : h("button", { type: "button", onclick: pedirUbicacion }, "📍 Activar ubicación"),
+    h("button", { type: "button", onclick: mostrarDireccion }, conUbicacion ? "Cambiar dirección" : "✏️ Escribir mi dirección"),
   );
 }
 
-function leerUbicacion() {
-  try {
-    const ubicacion = JSON.parse(localStorage.getItem("ubicacion"));
-    return { lat: ubicacion?.lat ?? null, lng: ubicacion?.lng ?? null };
-  } catch {
-    return { lat: null, lng: null };
-  }
-}
+const leerUbicacion = leerUbicacionGuardada;
 
 function obtenerContexto() {
   return {

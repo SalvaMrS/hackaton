@@ -131,3 +131,41 @@ export function campoFormulario(etiqueta, control) {
   const envoltorio = control.tagName === 'DIV' ? 'div' : 'label';
   return h(envoltorio, { class: envoltorio === 'div' ? 'campo' : '' }, etiqueta, control);
 }
+
+const CLAVE_UBICACION = 'ubicacion';
+
+export function leerUbicacionGuardada() {
+  try {
+    const { lat, lng } = JSON.parse(localStorage.getItem(CLAVE_UBICACION)) ?? {};
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : { lat: null, lng: null };
+  } catch {
+    return { lat: null, lng: null };
+  }
+}
+
+export function guardarUbicacion({ lat, lng, nombre = '' }) {
+  try {
+    localStorage.setItem(CLAVE_UBICACION, JSON.stringify({ lat, lng, nombre }));
+  } catch { /* sin almacenamiento: se usa solo en esta pantalla */ }
+}
+
+export function formularioDireccion({ alObtener }) {
+  const direccion = h('input', { type: 'text', placeholder: 'Tu dirección o barrio, ej: Pellegrini 1200, Rosario', maxlength: 150, style: 'flex:1;min-width:200px' });
+  const mensaje = h('span', { class: 'mensaje-error' });
+  return h('form', { class: 'fila', onsubmit: async (evento) => {
+    evento.preventDefault();
+    mensaje.textContent = '';
+    try {
+      const ubicacion = await api(`/api/geocodificar?q=${encodeURIComponent(direccion.value)}`);
+      guardarUbicacion(ubicacion);
+      alObtener(ubicacion);
+    } catch (error) { mensaje.textContent = error.message; }
+  } }, direccion, h('button', { type: 'submit' }, 'Usar esta dirección'), mensaje);
+}
+
+export function pedirUbicacionDelNavegador({ alObtener, alFallar }) {
+  if (!navigator.geolocation || !window.isSecureContext) { alFallar(); return; }
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => { const ubicacion = { lat: coords.latitude, lng: coords.longitude }; guardarUbicacion(ubicacion); alObtener(ubicacion); },
+    alFallar, { timeout: 8000 });
+}
