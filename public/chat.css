@@ -112,6 +112,7 @@ body {
   border-radius: 8px;
   background: #fff;
   box-shadow: 0 1px 1px #0002;
+  white-space: pre-wrap;
 }
 
 .burbuja.usuario {
@@ -120,7 +121,6 @@ body {
 }
 
 .burbuja .texto {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
   line-height: 1.35;
 }
@@ -140,6 +140,14 @@ body {
   color: #53bdeb;
   font-size: .78rem;
   letter-spacing: -1px;
+}
+
+.burbuja.escribiendo {
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  color: #667781;
+  font-size: .78rem;
 }
 
 .puntos {
