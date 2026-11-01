@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario } from './dom.js';
 import { PLANTILLAS, plantillaPara } from './plantillas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
@@ -88,7 +88,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
 
   const entradas = Object.fromEntries(campos.map((campo) => {
     const entrada = campo.tipo === 'imagen' ? campoImagen() : campo.opciones
-      ? h('select', {}, ...campo.opciones.map(([valor, texto]) => h('option', { value: valor }, texto)))
+      ? grupoBotones(campo.opciones)
       : h('input', { type: campo.tipo ?? 'text', value: campo.inicial ?? '', min: campo.min, step: campo.paso, required: campo.requerido, list: campo.lista });
     return [campo.nombre, entrada];
   }));
@@ -99,13 +99,14 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
   const guardar = h('button', { type: 'submit' }, 'Guardar');
   const cancelar = h('button', { type: 'button', class: 'secundario', hidden: true, onclick: limpiar }, 'Cancelar');
   const formulario = h('form', { class: 'formulario tarjeta', onsubmit: enviar },
-    ...campos.map((campo) => h('label', {}, campo.etiqueta, entradas[campo.nombre])), h('div', { class: 'fila' }, guardar, cancelar));
+    ...campos.map((campo) => campoFormulario(campo.etiqueta, entradas[campo.nombre])), h('div', { class: 'fila' }, guardar, cancelar));
   const tabla = h('div');
 
   function limpiar() {
     editandoId = null;
     formulario.reset();
     campos.filter((campo) => campo.tipo === 'imagen').forEach((campo) => { entradas[campo.nombre].value = ''; });
+    campos.filter((campo) => campo.opciones).forEach((campo) => { entradas[campo.nombre].value = campo.opciones[0][0]; });
     guardar.textContent = 'Guardar';
     cancelar.hidden = true;
   }
@@ -138,8 +139,8 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
     tabla.replaceChildren(filas.length ? h('table', {},
       h('thead', {}, h('tr', {}, ...columnas.map((columna) => h('th', {}, columna.etiqueta)), h('th'))),
       h('tbody', {}, ...filas.map((fila) => h('tr', {}, ...columnas.map((columna) => h('td', {}, columna.mostrar(fila))),
-        h('td', { class: 'fila' }, h('button', { class: 'secundario', onclick: () => editar(fila) }, 'Editar'),
-          h('button', { class: 'peligro', onclick: () => borrar(fila) }, 'Borrar')))))) : h('p', { class: 'suave' }, 'Todavía no cargaste nada.'));
+        h('td', {}, h('div', { class: 'fila' }, h('button', { class: 'secundario', onclick: () => editar(fila) }, 'Editar'),
+          h('button', { class: 'peligro', onclick: () => borrar(fila) }, 'Borrar'))))))) : h('p', { class: 'suave' }, 'Todavía no cargaste nada.'));
   }
 
   contenedor.append(h('h2', { style: 'margin-top:0' }, titulo), formulario, mensaje, tabla);
@@ -165,15 +166,17 @@ function seccionAgenda() {
         h('td', {}, turno.cliente_nombre, turno.cliente_telefono && h('div', { class: 'suave' }, turno.cliente_telefono)),
         h('td', {}, turno.servicio), h('td', {}, turno.plaza), h('td', {}, turno.personas), h('td', {}, turno.codigo),
         h('td', {}, h('span', { class: `etiqueta ${turno.estado}` }, turno.estado)),
-        h('td', { class: 'fila' },
+        h('td', {}, h('div', { class: 'fila' },
           turno.estado === 'confirmado' && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'en_curso') }, 'Llegó'),
           ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'atendido') }, 'Atendido'),
-          ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'peligro', onclick: () => cambiarEstado(turno, 'cancelado') }, 'Cancelar')))))
+          ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'peligro', onclick: () => cambiarEstado(turno, 'cancelado') }, 'Cancelar'))))))
     ) : h('p', { class: 'suave' }, 'No hay turnos para este día.'));
   }
 
   fecha.addEventListener('change', cargar);
   const contenedor = h('div', {}, h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Turnos del día'), fecha,
+    h('button', { class: 'secundario', onclick: () => { fecha.value = fechaHoy(); cargar(); } }, 'Hoy'),
+    h('button', { class: 'secundario', onclick: () => { fecha.value = fechaHoy(1); cargar(); } }, 'Mañana'),
     h('button', { class: 'secundario', onclick: cargar }, '↻ Actualizar')), mensaje, tabla);
   cargar();
   const refresco = setInterval(() => { if (contenedor.isConnected) cargar(); else clearInterval(refresco); }, 15_000);
@@ -223,7 +226,7 @@ const SECCIONES = {
   Horarios: () => seccionCrud({
     ruta: '/api/horarios', titulo: 'Horarios de atención',
     campos: [
-      { nombre: 'dia_semana', etiqueta: 'Día', opciones: DIAS.map((dia, indice) => [indice, dia]) },
+      { nombre: 'dia_semana', etiqueta: 'Día', opciones: DIAS.map((dia, indice) => [indice, dia.slice(0, 3)]) },
       { nombre: 'apertura', etiqueta: 'Apertura', tipo: 'time', inicial: '09:00', requerido: true },
       { nombre: 'cierre', etiqueta: 'Cierre', tipo: 'time', inicial: '18:00', requerido: true },
     ],
@@ -247,7 +250,7 @@ async function mostrarPanel() {
   pestanas.append(...Object.keys(SECCIONES).map((nombre) => h('button', { onclick: () => activar(nombre) }, nombre)));
   app.replaceChildren(
     h('h1', {}, comercio.nombre),
-    h('p', { class: 'suave' }, 'Tu página pública: ', h('a', { href: `/?c=${comercio.slug}`, target: '_blank' }, `/?c=${comercio.slug}`)),
+    h('a', { class: 'boton secundario', style: 'margin:6px 0 14px', href: `/?c=${comercio.slug}`, target: '_blank', rel: 'noopener' }, 'Ver mi página pública ↗'),
     pestanas, contenido);
   activar('Salón');
 }

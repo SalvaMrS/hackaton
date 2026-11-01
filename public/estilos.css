@@ -64,3 +64,15 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 a.tarjeta:hover { box-shadow:0 6px 18px #1b1f2a1a; transform:translateY(-2px); } a.tarjeta { transition:box-shadow .15s,transform .15s; }
 .plaza.cancha { justify-content:flex-start; padding-top:.8cqw; }
 .google-pendiente { display:grid; gap:6px; margin-top:12px; grid-column:1/-1; } .google-pendiente .suave { font-size:.82rem; }
+.segmentado { display:inline-flex; flex-wrap:wrap; gap:4px; padding:4px; background:#eef0f6; border-radius:10px; }
+.segmentado button { background:transparent; color:var(--texto); padding:7px 14px; border-radius:7px; }
+.segmentado button:hover { background:#e2e5ef; } .segmentado button.activa { background:var(--primario); color:#fff; box-shadow:0 1px 3px #0003; }
+.contador { display:inline-flex; align-items:center; gap:6px; } .contador button { width:40px; height:40px; padding:0; font-size:1.3rem; line-height:1; } .contador-valor { min-width:2.2em; text-align:center; font-size:1.2rem; font-weight:700; }
+.campo { display:flex; flex-direction:column; gap:4px; font-size:.9rem; color:var(--suave); }
+.chips-rubro { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; } .chips-rubro button { background:#fff; color:var(--texto); border:1px solid var(--borde); border-radius:99px; } .chips-rubro button::first-letter { text-transform:uppercase; }
+.chips-rubro button.activa { background:var(--primario); color:#fff; border-color:var(--primario); }
+.tarjeta .boton { margin-top:8px; }
+.pestanas { gap:6px; border-bottom:0; flex-wrap:wrap; padding-bottom:4px; }
+.pestanas button { background:#fff; color:var(--texto); border:1px solid var(--borde); border-radius:10px; border-bottom:1px solid var(--borde); }
+.pestanas button:hover { background:#eef0f6; } .pestanas button.activa { background:var(--primario); color:#fff; border-color:var(--primario); }
+input[type=color] { padding:2px 4px; height:40px; width:64px; cursor:pointer; }

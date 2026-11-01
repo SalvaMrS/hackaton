@@ -1,4 +1,4 @@
-import { h, api, mostrarError, campoImagen } from './dom.js';
+import { h, api, mostrarError, campoImagen, grupoBotones, campoFormulario } from './dom.js';
 import { crearLienzo, LEYENDA } from './lienzo.js';
 
 export function textoSituacion({ situacion, minutos }) {
@@ -131,24 +131,24 @@ export function seccionPlazas() {
     nombre: h('input', { required: true, maxlength: 80 }),
     tipo: h('input', { maxlength: 40, placeholder: 'mesa, silla, sillón…' }),
     capacidad: h('input', { type: 'number', min: 1, value: 2, required: true }),
-    forma: h('select', {}, h('option', { value: 'circulo' }, 'Círculo / óvalo'), h('option', { value: 'rectangulo' }, 'Rectángulo / cuadrado')),
+    forma: grupoBotones([['circulo', '● Círculo / óvalo'], ['rectangulo', '▬ Rectángulo / cuadrado']]),
     ancho: h('input', { type: 'number', min: 3, max: 70, step: 0.5, value: 9 }),
     alto: h('input', { type: 'number', min: 3, max: 70, step: 0.5, value: 9 }),
-    colorPropio: h('input', { type: 'checkbox' }),
+    colorPropio: grupoBotones([[0, 'Según estado'], [1, 'Color propio']]),
     color: h('input', { type: 'color', value: '#3b82f6' }),
     descripcion: h('textarea', { rows: 3, maxlength: 500, placeholder: 'Ubicación, comodidades, restricciones…' }),
-    activo: h('select', {}, h('option', { value: 1 }, 'Disponible'), h('option', { value: 0 }, 'Desactivada')),
+    activo: grupoBotones([[1, 'Disponible'], [0, 'Desactivada']]),
   };
   const titulo = h('strong', {}, 'Nueva plaza');
   const quitar = h('button', { type: 'button', class: 'peligro', hidden: true, onclick: quitarPlaza }, 'Quitar');
   const formulario = h('form', { class: 'tarjeta formulario', style: 'grid-template-columns:1fr', onsubmit: guardar },
     titulo, h('label', {}, 'Nombre', entradas.nombre), h('label', {}, 'Tipo', entradas.tipo),
     h('label', {}, 'Capacidad (personas)', entradas.capacidad), h('label', {}, 'Descripción', entradas.descripcion),
-    h('label', {}, 'Forma', entradas.forma),
+    campoFormulario('Forma', entradas.forma),
     h('div', { class: 'fila' }, h('label', {}, 'Ancho', entradas.ancho), h('label', {}, 'Alto', entradas.alto)),
-    h('div', { class: 'fila' }, h('label', { style: 'flex-direction:row;align-items:center' }, entradas.colorPropio, 'Color propio'), entradas.color),
+    campoFormulario('Color', h('div', { class: 'fila' }, entradas.colorPropio, entradas.color)),
     h('p', { class: 'suave', style: 'margin:0' }, 'El borde sigue mostrando el estado (libre, ocupada…). También podés cambiar el tamaño arrastrando el cuadradito de la esquina.'),
-    h('label', {}, 'Estado', entradas.activo),
+    campoFormulario('Estado', entradas.activo),
     h('div', { class: 'fila' }, h('button', { type: 'submit' }, 'Guardar'),
       h('button', { type: 'button', class: 'secundario', onclick: () => cargarFormulario(null) }, 'Nueva'), quitar));
 
@@ -164,7 +164,7 @@ export function seccionPlazas() {
     entradas.forma.value = plaza?.forma ?? 'circulo';
     entradas.ancho.value = plaza?.ancho ?? 9;
     entradas.alto.value = plaza?.alto ?? 9;
-    entradas.colorPropio.checked = Boolean(plaza?.color);
+    entradas.colorPropio.value = plaza?.color ? 1 : 0;
     entradas.color.value = plaza?.color || '#3b82f6';
     if (!plaza) lienzo.deseleccionar();
   }
@@ -187,7 +187,7 @@ export function seccionPlazas() {
       nombre: entradas.nombre.value, tipo: entradas.tipo.value, capacidad: Number(entradas.capacidad.value),
       descripcion: entradas.descripcion.value, activo: Number(entradas.activo.value),
       forma: entradas.forma.value, ancho: Number(entradas.ancho.value), alto: Number(entradas.alto.value),
-      color: entradas.colorPropio.checked ? entradas.color.value : '',
+      color: Number(entradas.colorPropio.value) === 1 ? entradas.color.value : '',
     };
     try {
       await api(plazaEnFormulario ? `/api/plazas/${plazaEnFormulario.id}` : '/api/plazas',

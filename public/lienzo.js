@@ -77,8 +77,8 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
     const circulo = h('div', {
       class: `plaza ${plaza.estado} ${personalizada ? 'personalizada' : ''} ${/cancha/i.test(plaza.tipo) ? 'cancha' : ''} ${estado.seleccionada === plaza.id ? 'seleccionada' : ''}`,
       style: estiloPlaza(plaza, personalizada), title: plaza.nombre,
-    }, h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`),
-    estado.editando && estado.seleccionada === plaza.id ? crearAsaTamano(plaza, circulo) : null);
+    }, h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`));
+    if (estado.editando && estado.seleccionada === plaza.id) circulo.append(crearAsaTamano(plaza, circulo));
     circulo.addEventListener('pointerdown', (evento) => {
       const elegir = () => { estado.seleccionada = plaza.id; dibujar(); alElegirPlaza(plaza); };
       if (!estado.editando) { elegir(); return; }

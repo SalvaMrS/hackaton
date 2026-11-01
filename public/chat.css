@@ -68,9 +68,13 @@ body {
   color: #fff;
   font-size: .9rem;
   text-decoration: none;
+  padding: 7px 16px;
+  border: 1px solid #ffffff99;
+  border-radius: 99px;
+  background: #ffffff22;
 }
 
-.volver:hover { text-decoration: underline; }
+.volver:hover { background: #ffffff44; }
 
 .mensajes {
   display: flex;

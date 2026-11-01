@@ -76,13 +76,14 @@ export function campoImagen() {
   const vista = h('img', { alt: '', style: 'max-width:120px;max-height:80px;border-radius:8px;display:none' });
   const mensaje = h('span', { class: 'mensaje-error' });
   const quitar = h('button', { type: 'button', class: 'secundario', style: 'display:none', onclick: () => { contenedor.value = ''; } }, 'Quitar');
-  const archivo = h('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', onchange: async () => {
+  const archivo = h('input', { type: 'file', hidden: true, accept: 'image/png,image/jpeg,image/webp', onchange: async () => {
     mensaje.textContent = '';
     if (!archivo.files[0]) return;
     try { contenedor.value = await subirImagen(archivo.files[0]); } catch (error) { mensaje.textContent = error.message; }
     archivo.value = '';
   } });
-  const contenedor = h('div', { class: 'fila' }, archivo, vista, quitar, mensaje);
+  const subir = h('button', { type: 'button', class: 'secundario', onclick: () => archivo.click() }, '📷 Subir imagen');
+  const contenedor = h('div', { class: 'fila' }, archivo, subir, vista, quitar, mensaje);
   Object.defineProperty(contenedor, 'value', {
     get: () => url,
     set: (valor) => {
@@ -93,4 +94,40 @@ export function campoImagen() {
     },
   });
   return contenedor;
+}
+
+export function grupoBotones(opciones, inicial = opciones[0][0]) {
+  let actual = inicial;
+  const botones = opciones.map(([valor, texto]) => h('button', { type: 'button', onclick: () => {
+    contenedor.value = valor;
+    contenedor.dispatchEvent(new Event('change'));
+  } }, texto));
+  const contenedor = h('div', { class: 'segmentado', role: 'group' }, ...botones);
+  const pintar = () => botones.forEach((boton, indice) => boton.classList.toggle('activa', String(opciones[indice][0]) === String(actual)));
+  Object.defineProperty(contenedor, 'value', { get: () => actual, set: (valor) => { actual = valor; pintar(); } });
+  pintar();
+  return contenedor;
+}
+
+export function contador({ min = 1, max = 99, valor = min } = {}) {
+  let actual = valor;
+  const pantalla = h('span', { class: 'contador-valor' }, String(actual));
+  const menos = h('button', { type: 'button', class: 'secundario', 'aria-label': 'Menos', onclick: () => cambiar(-1) }, '−');
+  const mas = h('button', { type: 'button', class: 'secundario', 'aria-label': 'Más', onclick: () => cambiar(1) }, '+');
+  const contenedor = h('div', { class: 'contador' }, menos, pantalla, mas);
+  const pintar = () => { pantalla.textContent = String(actual); menos.disabled = actual <= min; mas.disabled = actual >= max; };
+  function cambiar(delta) {
+    const nuevo = Math.min(max, Math.max(min, actual + delta));
+    if (nuevo === actual) return;
+    contenedor.value = nuevo;
+    contenedor.dispatchEvent(new Event('change'));
+  }
+  Object.defineProperty(contenedor, 'value', { get: () => actual, set: (valor) => { actual = Number(valor); pintar(); } });
+  pintar();
+  return contenedor;
+}
+
+export function campoFormulario(etiqueta, control) {
+  const envoltorio = control.tagName === 'DIV' ? 'div' : 'label';
+  return h(envoltorio, { class: envoltorio === 'div' ? 'campo' : '' }, etiqueta, control);
 }

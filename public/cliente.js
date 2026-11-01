@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -79,7 +79,8 @@ function tarjetaComercio(comercio) {
     h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
       comercio.distancia_km != null && h('span', { class: 'suave' }, `a ${comercio.distancia_km} km`)),
     h('p', { class: 'suave' }, comercio.servicios ?? 'Sin servicios cargados'),
-    comercio.direccion && h('div', { class: 'suave' }, `📍 ${comercio.direccion}`));
+    comercio.direccion && h('div', { class: 'suave' }, `📍 ${comercio.direccion}`),
+    h('span', { class: 'boton' }, 'Ver y reservar'));
 }
 
 function tarjetaTurno(turno, alCambiar) {
@@ -117,9 +118,19 @@ async function mostrarBuscador() {
   const resultados = h('div', { class: 'grilla' });
   const texto = h('input', { type: 'search', placeholder: 'Buscá un servicio, rubro o comercio…', style: 'flex:1;min-width:220px' });
   const estado = h('p', { class: 'suave' });
+  const chips = h('div', { class: 'chips-rubro' });
+  let rubroElegido = '';
+
+  async function cargarRubros() {
+    const rubros = await api('/api/rubros').catch(() => []);
+    chips.replaceChildren(...['', ...rubros].map((rubro) => h('button', {
+      type: 'button', class: rubro === rubroElegido ? 'activa' : '',
+      onclick: () => { rubroElegido = rubro; cargarRubros(); buscar(); },
+    }, rubro || 'Todos')));
+  }
 
   async function buscar() {
-    const consulta = new URLSearchParams({ q: texto.value });
+    const consulta = new URLSearchParams({ q: texto.value, rubro: rubroElegido });
     if (ubicacion.lat != null) { consulta.set('lat', ubicacion.lat); consulta.set('lng', ubicacion.lng); }
     try {
       const comercios = await api(`/api/comercios?${consulta}`);
@@ -138,7 +149,8 @@ async function mostrarBuscador() {
     h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
       texto, h('button', { type: 'submit' }, 'Buscar'),
       h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí')),
-    estado, resultados, sesion.usuario && seccionMisTurnos());
+    chips, estado, resultados, sesion.usuario && seccionMisTurnos());
+  cargarRubros();
   buscar();
   pedirUbicacion(buscar, () => { estado.textContent = 'Activá tu ubicación para ver primero lo más cercano. También podés buscar sin ella.'; });
 }
@@ -147,12 +159,16 @@ async function mostrarComercio(slug) {
   slugActual = slug;
   let comercio;
   try { comercio = await api(`/api/comercios/${encodeURIComponent(slug)}`); } catch (error) {
-    app.replaceChildren(h('p', { class: 'mensaje-error' }, error.message), h('a', { href: '/' }, '← Volver'));
+    app.replaceChildren(h('p', { class: 'mensaje-error' }, error.message), h('a', { class: 'boton secundario', href: '/' }, '← Volver'));
     return;
   }
   const reserva = { servicio: null, inicio: null };
   const fecha = h('input', { type: 'date', value: fechaHoy(), min: fechaHoy() });
-  const personas = h('input', { type: 'number', min: 1, max: comercio.capacidad_maxima || 1, value: 1, style: 'width:90px' });
+  const personas = contador({ min: 1, max: comercio.capacidad_maxima || 1, valor: 1 });
+  const atajos = h('div', { class: 'segmentado' }, ...[['Hoy', 0], ['Mañana', 1], ['Pasado mañana', 2]].map(([texto, dias]) => h('button', {
+    type: 'button', 'data-fecha': fechaHoy(dias), onclick: () => { fecha.value = fechaHoy(dias); marcarAtajos(); cargarFranjas(); },
+  }, texto)));
+  const marcarAtajos = () => atajos.querySelectorAll('button').forEach((boton) => boton.classList.toggle('activa', boton.dataset.fecha === fecha.value));
   const franjas = h('div', { class: 'franjas' });
   const nombre = h('input', { placeholder: 'Nombre de quien reserva', maxlength: 80 });
   const telefono = h('input', { placeholder: 'Teléfono (opcional)', maxlength: 40 });
@@ -161,7 +177,8 @@ async function mostrarComercio(slug) {
   const zonaIngreso = h('div');
   const pasoReserva = h('div', { class: 'tarjeta', hidden: true },
     h('h2', { style: 'margin-top:0' }, '2. Elegí día y horario'),
-    h('div', { class: 'fila' }, h('label', {}, '¿Para cuántas personas?', personas), h('label', {}, 'Día', fecha)),
+    h('div', { class: 'fila', style: 'align-items:flex-end;gap:18px' }, campoFormulario('¿Para cuántas personas?', personas),
+      campoFormulario('Día', h('div', { class: 'fila' }, atajos, fecha))),
     h('p', { class: 'suave' }, `Te asignamos automáticamente el lugar que mejor se ajuste (hasta ${comercio.capacidad_maxima} personas por reserva).`),
     h('p', { class: 'suave' }, 'Horarios disponibles'), franjas,
     h('h2', {}, '3. ¿A nombre de quién?'),
@@ -218,13 +235,14 @@ async function mostrarComercio(slug) {
     cargarFranjas();
   }
 
-  fecha.addEventListener('change', cargarFranjas);
-  personas.addEventListener('input', () => { if (Number(personas.value) >= 1) cargarFranjas(); });
+  fecha.addEventListener('change', () => { marcarAtajos(); cargarFranjas(); });
+  personas.addEventListener('change', cargarFranjas);
+  marcarAtajos();
   nombre.value = sesion.usuario?.nombre ?? '';
 
   const horarios = resumirHorarios(comercio.horarios);
   app.replaceChildren(
-    h('a', { href: '/' }, '← Volver'),
+    h('a', { class: 'boton secundario', style: 'margin-bottom:10px', href: '/' }, '← Volver'),
     h('div', { class: 'portada', style: comercio.imagen_url ? `background-image:linear-gradient(#0000,#000a),url("${comercio.imagen_url}")` : '' },
       h('h1', {}, comercio.nombre),
       h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
