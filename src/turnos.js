@@ -13,6 +13,10 @@ export function ahoraLocal(fecha = new Date()) {
   return partes.replace(' ', 'T');
 }
 
+export function minutosEntre(desde, hasta) {
+  return Math.round((Date.parse(`${hasta}:00Z`) - Date.parse(`${desde}:00Z`)) / 60_000);
+}
+
 function aMinutos(horaTexto) {
   const [horas, minutos] = horaTexto.split(':').map(Number);
   return horas * 60 + minutos;
@@ -46,7 +50,7 @@ function plazasQueEntran(db, comercioId, personas) {
 
 function plazaOcupada(db, plazaId, inicio, fin) {
   return Boolean(db.prepare(
-    "SELECT 1 FROM turnos WHERE plaza_id = ? AND estado != 'cancelado' AND inicio < ? AND fin > ?",
+    "SELECT 1 FROM turnos WHERE plaza_id = ? AND estado NOT IN ('cancelado', 'ausente') AND inicio < ? AND fin > ?",
   ).get(plazaId, fin, inicio));
 }
 

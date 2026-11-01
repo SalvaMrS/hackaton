@@ -5,7 +5,7 @@ import { listarComercios, detalleComercio, buscarComercioPorSlug } from './comer
 
 import { responderChat } from './chat.js';
 
-const ESTADOS = ['confirmado', 'atendido', 'cancelado'];
+const ESTADOS = ['confirmado', 'en_curso', 'atendido', 'cancelado', 'ausente'];
 const LIMITE_CHAT_POR_MINUTO = 20;
 
 function leerContextoChat(contexto = {}) {

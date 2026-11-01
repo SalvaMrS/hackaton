@@ -36,3 +36,14 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 .burbuja { max-width:85%; padding:8px 12px; border-radius:14px; white-space:pre-wrap; background:#eef0f6; align-self:flex-start; }
 .burbuja.usuario { background:var(--primario); color:#fff; align-self:flex-end; }
 #chat-form { display:flex; gap:6px; padding:10px; border-top:1px solid var(--borde); } #chat-form input { flex:1; }
+.etiqueta.en_curso { background:#fee2e2; color:#b91c1c; } .etiqueta.ausente { background:#e5e7eb; color:#374151; }
+.salon { position:relative; width:100%; aspect-ratio:16/9; min-height:300px; background:#fff radial-gradient(#d9dce6 1px,transparent 1px) 0 0/22px 22px; border:2px dashed var(--borde); border-radius:14px; overflow:hidden; touch-action:none; }
+.plaza { position:absolute; width:78px; height:78px; margin:-39px 0 0 -39px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:.78rem; line-height:1.15; color:#fff; font-weight:600; cursor:grab; user-select:none; box-shadow:0 3px 8px #0003; border:3px solid #fff; }
+.plaza.arrastrando { cursor:grabbing; box-shadow:0 8px 20px #0005; z-index:5; }
+.plaza small { font-weight:400; opacity:.9; }
+.plaza.libre { background:#10b981; } .plaza.proximo { background:#eab308; color:#1b1f2a; } .plaza.en_hora { background:#f97316; }
+.plaza.demorado { background:#dc2626; } .plaza.ausente { background:#6b7280; } .plaza.en_curso { background:#4f46e5; }
+.leyenda { display:flex; flex-wrap:wrap; gap:12px; font-size:.85rem; margin:8px 0; }
+.leyenda span::before { content:''; display:inline-block; width:12px; height:12px; border-radius:50%; margin-right:5px; vertical-align:-1px; background:var(--color); }
+.recepcion-destino { font-size:1.8rem; font-weight:800; color:var(--primario); }
+.situacion-proximo { color:#a16207; } .situacion-en_hora { color:#c2410c; } .situacion-demorado { color:var(--error); font-weight:600; } .situacion-ausente { color:#6b7280; } .situacion-en_curso { color:var(--primario); }

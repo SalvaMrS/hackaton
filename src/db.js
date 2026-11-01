@@ -63,9 +63,25 @@ CREATE INDEX IF NOT EXISTS idx_turnos_plaza_inicio ON turnos(plaza_id, inicio);
 CREATE INDEX IF NOT EXISTS idx_turnos_comercio_inicio ON turnos(comercio_id, inicio);
 `;
 
+const COLUMNAS_NUEVAS = [
+  ['plazas', 'pos_x', 'REAL'],
+  ['plazas', 'pos_y', 'REAL'],
+  ['comercios', 'aviso_min', 'INTEGER NOT NULL DEFAULT 30'],
+  ['comercios', 'tolerancia_min', 'INTEGER NOT NULL DEFAULT 10'],
+  ['comercios', 'ausente_min', 'INTEGER NOT NULL DEFAULT 30'],
+];
+
+function agregarColumnasFaltantes(db) {
+  for (const [tabla, columna, definicion] of COLUMNAS_NUEVAS) {
+    const existe = db.prepare(`PRAGMA table_info(${tabla})`).all().some(({ name }) => name === columna);
+    if (!existe) db.exec(`ALTER TABLE ${tabla} ADD COLUMN ${columna} ${definicion}`);
+  }
+}
+
 export function abrirBaseDeDatos(ruta = process.env.DB_PATH ?? 'turnos.db') {
   const db = new DatabaseSync(ruta);
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;');
   db.exec(ESQUEMA);
+  agregarColumnasFaltantes(db);
   return db;
 }

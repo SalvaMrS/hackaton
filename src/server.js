@@ -8,6 +8,7 @@ import { abrirBaseDeDatos } from './db.js';
 import { rutasAuth } from './rutas-auth.js';
 import { rutasComercio } from './rutas-comercio.js';
 import { rutasPublicas } from './rutas-publicas.js';
+import { rutasSalon } from './salon.js';
 
 const publico = fileURLToPath(new URL('../public', import.meta.url));
 
@@ -19,6 +20,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   app.register(async (instancia) => rutasAuth(instancia));
   app.register(async (instancia) => rutasComercio(instancia));
   app.register(async (instancia) => rutasPublicas(instancia));
+  app.register(async (instancia) => rutasSalon(instancia));
 
   app.get('/api/salud', async () => ({ ok: true }));
 

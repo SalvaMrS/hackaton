@@ -1,5 +1,6 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError } from './dom.js';
 import { PLANTILLAS } from './plantillas.js';
+import { seccionSalon, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
 const app = document.getElementById('app');
 const barra = document.getElementById('acciones-barra');
@@ -161,8 +162,9 @@ function seccionAgenda() {
         h('td', {}, turno.servicio), h('td', {}, turno.plaza), h('td', {}, turno.personas), h('td', {}, turno.codigo),
         h('td', {}, h('span', { class: `etiqueta ${turno.estado}` }, turno.estado)),
         h('td', { class: 'fila' },
-          turno.estado === 'confirmado' && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'atendido') }, 'Atendido'),
-          turno.estado === 'confirmado' && h('button', { class: 'peligro', onclick: () => cambiarEstado(turno, 'cancelado') }, 'Cancelar')))))
+          turno.estado === 'confirmado' && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'en_curso') }, 'Llegó'),
+          ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'atendido') }, 'Atendido'),
+          ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'peligro', onclick: () => cambiarEstado(turno, 'cancelado') }, 'Cancelar')))))
     ) : h('p', { class: 'suave' }, 'No hay turnos para este día.'));
   }
 
@@ -175,6 +177,8 @@ function seccionAgenda() {
 }
 
 const SECCIONES = {
+  Salón: seccionSalon,
+  Recepción: seccionRecepcion,
   Agenda: seccionAgenda,
   Servicios: () => seccionCrud({
     ruta: '/api/servicios', titulo: 'Catálogo de servicios',
@@ -205,6 +209,7 @@ const SECCIONES = {
       { etiqueta: 'Capacidad', mostrar: (fila) => fila.capacidad }, { etiqueta: 'Disponible', mostrar: (fila) => (fila.activo ? 'Sí' : 'No') },
     ],
   }),
+  Configuración: seccionConfiguracion,
   Horarios: () => seccionCrud({
     ruta: '/api/horarios', titulo: 'Horarios de atención',
     campos: [
@@ -234,7 +239,7 @@ async function mostrarPanel() {
     h('h1', {}, comercio.nombre),
     h('p', { class: 'suave' }, 'Tu página pública: ', h('a', { href: `/?c=${comercio.slug}`, target: '_blank' }, `/?c=${comercio.slug}`)),
     pestanas, contenido);
-  activar('Agenda');
+  activar('Salón');
 }
 
 iniciar().catch((error) => mostrarError(app, error));

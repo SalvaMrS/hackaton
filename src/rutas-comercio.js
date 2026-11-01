@@ -12,7 +12,20 @@ function leerComercio(body) {
     telefono: textoOpcional(body.telefono, 'telefono', 40),
     lat: coordenadaOpcional(body.lat, 'lat', 90),
     lng: coordenadaOpcional(body.lng, 'lng', 180),
+    ...leerUmbrales(body),
   };
+}
+
+function leerUmbrales(body) {
+  const umbrales = {
+    aviso_min: enteroEnRango(body.aviso_min ?? 30, 'aviso_min', 0, 240),
+    tolerancia_min: enteroEnRango(body.tolerancia_min ?? 10, 'tolerancia_min', 0, 120),
+    ausente_min: enteroEnRango(body.ausente_min ?? 30, 'ausente_min', 1, 480),
+  };
+  if (umbrales.ausente_min <= umbrales.tolerancia_min) {
+    throw errorHttp(400, 'campo_invalido', 'ausente_min debe ser mayor que tolerancia_min');
+  }
+  return umbrales;
 }
 
 function leerServicio(body) {
@@ -102,8 +115,8 @@ export function rutasComercio(app) {
     const datos = leerComercio(req.body ?? {});
     const slug = slugLibre(db, datos.nombre);
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO comercios (slug, nombre, rubro, descripcion, direccion, telefono, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(slug, datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng);
+      .prepare('INSERT INTO comercios (slug, nombre, rubro, descripcion, direccion, telefono, lat, lng, aviso_min, tolerancia_min, ausente_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(slug, datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.aviso_min, datos.tolerancia_min, datos.ausente_min);
     db.prepare('UPDATE usuarios SET comercio_id = ? WHERE id = ?').run(lastInsertRowid, req.usuario.id);
     return reply.status(201).send({ id: Number(lastInsertRowid), slug, ...datos });
   });
@@ -113,8 +126,8 @@ export function rutasComercio(app) {
 
   app.put('/api/comercio', { preHandler: exigirComercio(app) }, async (req) => {
     const datos = leerComercio(req.body ?? {});
-    db.prepare('UPDATE comercios SET nombre = ?, rubro = ?, descripcion = ?, direccion = ?, telefono = ?, lat = ?, lng = ? WHERE id = ?')
-      .run(datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, req.usuario.comercio_id);
+    db.prepare('UPDATE comercios SET nombre = ?, rubro = ?, descripcion = ?, direccion = ?, telefono = ?, lat = ?, lng = ?, aviso_min = ?, tolerancia_min = ?, ausente_min = ? WHERE id = ?')
+      .run(datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.aviso_min, datos.tolerancia_min, datos.ausente_min, req.usuario.comercio_id);
     return db.prepare('SELECT * FROM comercios WHERE id = ?').get(req.usuario.comercio_id);
   });
 
