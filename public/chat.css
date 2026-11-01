@@ -243,3 +243,4 @@ body {
 .estado input { flex: 1; min-width: 160px; padding: 6px 12px; border: 1px solid #d1d7db; border-radius: 99px; font: inherit; }
 .estado .mensaje-error { color: #b91c1c; width: 100%; }
 .estado button:disabled { opacity: .55; cursor: default; border-color: #c9c9c9; color: #666; }
+@media (max-width: 520px) { .estado { padding: 6px 10px; gap: 6px; font-size: .78rem; } .estado button { padding: 4px 10px; font-size: .78rem; } }

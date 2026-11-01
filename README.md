@@ -2,6 +2,8 @@
 
 **URL pública (sin SSL por ahora):** http://201.32.132.177/
 
+**Informe con funciones y capturas:** [INFORME.md](INFORME.md) · http://201.32.132.177/informe.html
+
 ## El problema
 Restaurantes, peluquerías, consultorios y canchas pierden ventas porque las consultas llegan por WhatsApp, teléfono o en persona, y los mensajes se pierden o se anotan mal. El cliente espera y se va.
 

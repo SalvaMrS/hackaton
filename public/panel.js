@@ -164,11 +164,11 @@ function seccionAgenda() {
   async function cargar() {
     const turnos = await api(`/api/turnos?fecha=${fecha.value}`);
     tabla.replaceChildren(turnos.length ? h('table', {},
-      h('thead', {}, h('tr', {}, ...['Hora', 'Cliente', 'Servicio', 'Plaza', 'Pers.', 'Código', 'Estado', ''].map((texto) => h('th', {}, texto)))),
+      h('thead', {}, h('tr', {}, ...['Hora', 'Cliente', 'Servicio', 'Plaza', 'Pers.', 'Estado', ''].map((texto) => h('th', {}, texto)))),
       h('tbody', {}, ...turnos.map((turno) => h('tr', {},
         h('td', {}, `${turno.inicio.slice(11)}–${turno.fin.slice(11)}`),
         h('td', {}, turno.cliente_nombre, turno.cliente_telefono && h('div', { class: 'suave' }, turno.cliente_telefono)),
-        h('td', {}, turno.servicio), h('td', {}, turno.plaza), h('td', {}, turno.personas), h('td', {}, turno.codigo),
+        h('td', {}, turno.servicio), h('td', {}, turno.plaza), h('td', {}, turno.personas),
         h('td', {}, h('span', { class: `etiqueta ${turno.estado}` }, turno.estado)),
         h('td', {}, h('div', { class: 'fila' },
           turno.estado === 'confirmado' && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'en_curso') }, 'Llegó'),

@@ -151,7 +151,7 @@ async function actualizarEstado() {
     cliente
       ? h("span", { class: "ok" }, `📱 ${cliente.nombre} · ${cliente.telefono || "sin teléfono"}`)
       : h("button", { type: "button", onclick: () => window.open("/?ingresar=1", "_blank") }, "Ingresar para reservar"),
-    conUbicacion ? h("span", { class: "ok" }, "📍 Ubicación activada") : h("button", { type: "button", disabled: true, title: "Requiere HTTPS (certificado SSL)" }, "📍 Ubicación automática (requiere SSL)"),
+    conUbicacion ? h("span", { class: "ok" }, "📍 Ubicación activada") : h("button", { type: "button", disabled: true, title: "Requiere HTTPS (certificado SSL)" }, "📍 Automática: requiere SSL"),
     h("button", { type: "button", onclick: mostrarDireccion }, conUbicacion ? "Cambiar dirección" : "✏️ Escribir mi dirección"),
   );
 }

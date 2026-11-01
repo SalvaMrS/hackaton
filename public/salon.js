@@ -43,7 +43,7 @@ export function seccionRecepcion() {
 
   const tarjetaTurno = (turno) => h('div', { class: 'tarjeta' },
     h('div', { class: 'recepcion-destino' }, `Ir a: ${turno.plaza}`),
-    h('strong', {}, turno.cliente_nombre), h('div', { class: 'suave' }, `${turno.servicio} · ${turno.personas} pers. · ${turno.inicio.slice(11)} · código ${turno.codigo}`),
+    h('strong', {}, turno.cliente_nombre), h('div', { class: 'suave' }, `${turno.servicio} · ${turno.personas} pers. · ${turno.inicio.slice(11)}`),
     h('p', { class: `situacion-${turno.situacion}` }, textoSituacion(turno)),
     accionesDeTurno(turno, buscar));
 
