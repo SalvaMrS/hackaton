@@ -1,11 +1,5 @@
-import { h, api, mostrarError } from './dom.js';
-
-const LEYENDA = [
-  ['libre', 'Libre', '#10b981'], ['proximo', 'Reserva próxima', '#eab308'], ['en_hora', 'Hora de llegada', '#f97316'],
-  ['demorado', 'Demorado', '#dc2626'], ['ausente', 'No se presentó', '#6b7280'], ['en_curso', 'En atención', '#4f46e5'],
-];
-const UMBRAL_ARRASTRE_PX = 4;
-const REFRESCO_MS = 10_000;
+import { h, api, mostrarError, campoImagen } from './dom.js';
+import { crearLienzo, LEYENDA } from './lienzo.js';
 
 export function textoSituacion({ situacion, minutos }) {
   switch (situacion) {
@@ -32,94 +26,6 @@ export function accionesDeTurno(turno, alCambiar) {
     turno.estado === 'en_curso' && boton('Atendido (liberar)', 'atendido', ''),
     turno.estado === 'confirmado' && boton('No se presentó', 'ausente'),
     boton('Cancelar', 'cancelado', 'peligro'));
-}
-
-export function seccionSalon() {
-  const mapa = h('div', { class: 'salon' });
-  const detalle = h('div');
-  const mensaje = h('p');
-  const nombre = h('input', { placeholder: 'Ej: Mesa 5', required: true, maxlength: 80 });
-  const capacidad = h('input', { type: 'number', min: 1, value: 2, style: 'width:90px' });
-  const tipo = h('input', { placeholder: 'mesa, silla…', maxlength: 40, style: 'width:130px' });
-  let plazas = [];
-  let arrastrando = false;
-
-  async function cargar() {
-    if (arrastrando) return;
-    try {
-      plazas = await api('/api/salon');
-      mapa.replaceChildren(...plazas.map(dibujarPlaza));
-      if (!plazas.length) mapa.append(h('p', { class: 'suave', style: 'padding:20px' }, 'Agregá tu primera plaza con el formulario de arriba.'));
-    } catch (error) { mostrarError(mensaje, error); }
-  }
-
-  function dibujarPlaza(plaza) {
-    const circulo = h('div', { class: `plaza ${plaza.estado}`, style: `left:${plaza.x}%;top:${plaza.y}%`, title: plaza.nombre },
-      h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`));
-    circulo.addEventListener('pointerdown', (evento) => empezarArrastre(evento, circulo, plaza));
-    return circulo;
-  }
-
-  function empezarArrastre(evento, circulo, plaza) {
-    circulo.setPointerCapture(evento.pointerId);
-    const origen = { x: evento.clientX, y: evento.clientY };
-    let movido = false;
-    arrastrando = true;
-    circulo.classList.add('arrastrando');
-
-    const mover = (movimiento) => {
-      if (Math.hypot(movimiento.clientX - origen.x, movimiento.clientY - origen.y) > UMBRAL_ARRASTRE_PX) movido = true;
-      const caja = mapa.getBoundingClientRect();
-      plaza.x = Math.min(96, Math.max(4, ((movimiento.clientX - caja.left) / caja.width) * 100));
-      plaza.y = Math.min(94, Math.max(6, ((movimiento.clientY - caja.top) / caja.height) * 100));
-      circulo.style.left = `${plaza.x}%`;
-      circulo.style.top = `${plaza.y}%`;
-    };
-    const soltar = async () => {
-      circulo.removeEventListener('pointermove', mover);
-      circulo.removeEventListener('pointerup', soltar);
-      circulo.classList.remove('arrastrando');
-      arrastrando = false;
-      if (!movido) return mostrarDetalle(plaza);
-      try {
-        await api(`/api/plazas/${plaza.id}/posicion`, { metodo: 'PATCH', cuerpo: { x: plaza.x, y: plaza.y } });
-      } catch (error) { mostrarError(mensaje, error); }
-    };
-    circulo.addEventListener('pointermove', mover);
-    circulo.addEventListener('pointerup', soltar);
-  }
-
-  function mostrarDetalle(plaza) {
-    const { turno } = plaza;
-    detalle.replaceChildren(h('div', { class: 'tarjeta' },
-      h('strong', {}, `${plaza.nombre} · ${plaza.tipo || 'plaza'} · capacidad ${plaza.capacidad}`),
-      turno ? h('div', {},
-        h('p', {}, `${turno.cliente_nombre} · ${turno.personas} pers. · ${turno.inicio.slice(11)}–${turno.fin.slice(11)} · ${turno.servicio}`),
-        h('p', { class: `situacion-${turno.situacion}` }, textoSituacion(turno)),
-        accionesDeTurno(turno, () => { detalle.replaceChildren(); cargar(); }))
-        : h('p', { class: 'suave' }, 'Libre en este momento.')));
-  }
-
-  async function agregar(evento) {
-    evento.preventDefault();
-    try {
-      await api('/api/plazas', { metodo: 'POST', cuerpo: { nombre: nombre.value, tipo: tipo.value, capacidad: Number(capacidad.value) } });
-      nombre.value = '';
-      mensaje.textContent = '';
-      await cargar();
-    } catch (error) { mostrarError(mensaje, error); }
-  }
-
-  const contenedor = h('div', {},
-    h('form', { class: 'fila', onsubmit: agregar }, h('strong', {}, 'Nueva plaza'), nombre, tipo,
-      h('label', { style: 'flex-direction:row;align-items:center' }, '👥', capacidad), h('button', { type: 'submit' }, '+ Agregar')),
-    mensaje,
-    h('div', { class: 'leyenda' }, ...LEYENDA.map(([, texto, color]) => h('span', { style: `--color:${color}` }, texto))),
-    h('p', { class: 'suave' }, 'Arrastrá los círculos para armar tu salón. Tocá uno para ver la reserva.'),
-    mapa, detalle);
-  cargar();
-  const refresco = setInterval(() => { if (contenedor.isConnected) cargar(); else clearInterval(refresco); }, REFRESCO_MS);
-  return contenedor;
 }
 
 export function seccionRecepcion() {
@@ -151,12 +57,12 @@ export function seccionConfiguracion() {
   const mensaje = h('p');
   const campos = [
     ['nombre', 'Nombre', 'text'], ['rubro', 'Rubro', 'text'], ['direccion', 'Dirección', 'text'], ['telefono', 'Teléfono', 'text'],
-    ['lat', 'Latitud', 'number'], ['lng', 'Longitud', 'number'], ['descripcion', 'Descripción', 'text'],
+    ['lat', 'Latitud', 'number'], ['lng', 'Longitud', 'number'], ['descripcion', 'Descripción', 'text'], ['imagen_url', 'Imagen de portada del comercio', 'imagen'],
     ['aviso_min', 'Avisar reservas próximas (min antes)', 'number'],
     ['tolerancia_min', 'Tolerancia: pasado este tiempo figura "demorado" (min)', 'number'],
     ['ausente_min', 'Marcar "no se presentó" tras (min)', 'number'],
   ];
-  const entradas = Object.fromEntries(campos.map(([nombre, , tipo]) => [nombre, h('input', { type: tipo, step: 'any' })]));
+  const entradas = Object.fromEntries(campos.map(([nombre, , tipo]) => [nombre, tipo === 'imagen' ? campoImagen() : h('input', { type: tipo, step: 'any' })]));
 
   async function guardar(evento) {
     evento.preventDefault();
@@ -176,4 +82,115 @@ export function seccionConfiguracion() {
     h('form', { class: 'formulario tarjeta', onsubmit: guardar },
       ...campos.map(([nombre, etiqueta]) => h('label', {}, etiqueta, entradas[nombre])), h('button', { type: 'submit' }, 'Guardar')), mensaje);
   return contenedor;
+}
+
+function textoEstadoPlaza(plaza) {
+  if (plaza.estado === 'libre') return 'Libre en este momento';
+  if (plaza.estado === 'inactiva') return 'Desactivada';
+  const { turno } = plaza;
+  if (plaza.estado === 'en_curso') return `Atendiendo a ${turno.cliente_nombre} (${textoSituacion(turno).toLowerCase()})`;
+  return `${turno.cliente_nombre}: ${textoSituacion(turno).toLowerCase()}`;
+}
+
+function panelPlaza(plaza) {
+  return h('div', { class: 'tarjeta' },
+    h('h2', { style: 'margin-top:0' }, plaza.nombre),
+    h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, plaza.tipo || 'plaza'), h('span', { class: 'etiqueta' }, `👥 capacidad ${plaza.capacidad}`)),
+    plaza.descripcion && h('p', {}, plaza.descripcion),
+    h('p', { class: `situacion-${plaza.estado}` }, h('strong', {}, 'Ahora: '), textoEstadoPlaza(plaza)),
+    h('strong', {}, 'Turnos que vienen'),
+    plaza.proximos?.length
+      ? h('ul', { class: 'lista-proximos' }, ...plaza.proximos.map((turno) => h('li', {},
+        `${turno.inicio.slice(11)}–${turno.fin.slice(11)} · ${turno.cliente_nombre} · ${turno.personas} pers.`,
+        h('div', { class: `situacion-${turno.situacion}` }, textoSituacion(turno)))))
+      : h('p', { class: 'suave' }, 'Sin turnos pendientes hoy.'));
+}
+
+const leyenda = () => h('div', { class: 'leyenda' }, ...LEYENDA.map(([texto, color]) => h('span', { style: `--color:${color}` }, texto)));
+const pistaPlaza = () => h('div', { class: 'tarjeta suave' }, 'Tocá una plaza para ver sus características y los turnos que vienen.');
+
+export function seccionSalon() {
+  const lateral = h('div', {}, pistaPlaza());
+  const lienzo = crearLienzo({ alElegirPlaza: (plaza) => lateral.replaceChildren(panelPlaza(plaza)) });
+  return h('div', {}, h('h2', { style: 'margin-top:0' }, 'Salón en vivo'), leyenda(), lienzo.mensaje,
+    h('div', { class: 'dos-columnas' }, lienzo.mapa, lateral));
+}
+
+export function seccionPlazas() {
+  let editando = false;
+  let plazaEnFormulario = null;
+  const lateral = h('div', {}, pistaPlaza());
+  const mensaje = h('p');
+  const lienzo = crearLienzo({ alElegirPlaza: elegir, mostrarInactivas: true });
+  const interruptor = h('button', { onclick: alternarEdicion }, '✏ Habilitar edición');
+  const botonLinea = h('button', { class: 'secundario', hidden: true, onclick: () => lienzo.agregarGuia() }, '＋ Línea guía');
+
+  const entradas = {
+    nombre: h('input', { required: true, maxlength: 80 }),
+    tipo: h('input', { maxlength: 40, placeholder: 'mesa, silla, sillón…' }),
+    capacidad: h('input', { type: 'number', min: 1, value: 2, required: true }),
+    descripcion: h('textarea', { rows: 3, maxlength: 500, placeholder: 'Ubicación, comodidades, restricciones…' }),
+    activo: h('select', {}, h('option', { value: 1 }, 'Disponible'), h('option', { value: 0 }, 'Desactivada')),
+  };
+  const titulo = h('strong', {}, 'Nueva plaza');
+  const quitar = h('button', { type: 'button', class: 'peligro', hidden: true, onclick: quitarPlaza }, 'Quitar');
+  const formulario = h('form', { class: 'tarjeta formulario', style: 'grid-template-columns:1fr', onsubmit: guardar },
+    titulo, h('label', {}, 'Nombre', entradas.nombre), h('label', {}, 'Tipo', entradas.tipo),
+    h('label', {}, 'Capacidad (personas)', entradas.capacidad), h('label', {}, 'Descripción', entradas.descripcion),
+    h('label', {}, 'Estado', entradas.activo),
+    h('div', { class: 'fila' }, h('button', { type: 'submit' }, 'Guardar'),
+      h('button', { type: 'button', class: 'secundario', onclick: () => cargarFormulario(null) }, 'Nueva'), quitar));
+
+  function cargarFormulario(plaza) {
+    plazaEnFormulario = plaza;
+    titulo.textContent = plaza ? `Editar ${plaza.nombre}` : 'Nueva plaza';
+    quitar.hidden = !plaza;
+    entradas.nombre.value = plaza?.nombre ?? '';
+    entradas.tipo.value = plaza?.tipo ?? '';
+    entradas.capacidad.value = plaza?.capacidad ?? 2;
+    entradas.descripcion.value = plaza?.descripcion ?? '';
+    entradas.activo.value = plaza?.activo ?? 1;
+    if (!plaza) lienzo.deseleccionar();
+  }
+
+  function elegir(plaza) {
+    if (editando) cargarFormulario(plaza); else lateral.replaceChildren(panelPlaza(plaza));
+  }
+
+  function alternarEdicion() {
+    editando = !editando;
+    interruptor.textContent = editando ? '✔ Terminar edición' : '✏ Habilitar edición';
+    botonLinea.hidden = !editando;
+    lienzo.editar(editando);
+    if (editando) { lateral.replaceChildren(formulario); cargarFormulario(null); } else lateral.replaceChildren(pistaPlaza());
+  }
+
+  async function guardar(evento) {
+    evento.preventDefault();
+    const cuerpo = {
+      nombre: entradas.nombre.value, tipo: entradas.tipo.value, capacidad: Number(entradas.capacidad.value),
+      descripcion: entradas.descripcion.value, activo: Number(entradas.activo.value),
+    };
+    try {
+      await api(plazaEnFormulario ? `/api/plazas/${plazaEnFormulario.id}` : '/api/plazas',
+        { metodo: plazaEnFormulario ? 'PUT' : 'POST', cuerpo });
+      mensaje.textContent = '';
+      cargarFormulario(null);
+      await lienzo.recargar();
+    } catch (error) { mostrarError(mensaje, error); }
+  }
+
+  async function quitarPlaza() {
+    try {
+      await api(`/api/plazas/${plazaEnFormulario.id}`, { metodo: 'DELETE' });
+      mensaje.textContent = '';
+      cargarFormulario(null);
+      await lienzo.recargar();
+    } catch (error) { mostrarError(mensaje, error); }
+  }
+
+  return h('div', {},
+    h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Plazas'), interruptor, botonLinea),
+    h('p', { class: 'suave' }, 'Sin edición habilitada podés tocar una plaza para ver sus características. Con edición, arrastrá los círculos, agregá plazas y líneas guía.'),
+    leyenda(), lienzo.mensaje, mensaje, h('div', { class: 'dos-columnas' }, lienzo.mapa, lateral));
 }

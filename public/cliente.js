@@ -58,6 +58,7 @@ function pedirUbicacion(alObtener, alFallar) {
 
 function tarjetaComercio(comercio) {
   return h('a', { class: 'tarjeta', href: `?c=${comercio.slug}`, style: 'text-decoration:none;color:inherit' },
+    comercio.imagen_url && h('img', { class: 'servicio-imagen', src: comercio.imagen_url, alt: comercio.nombre }),
     h('strong', {}, comercio.nombre),
     h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
       comercio.distancia_km != null && h('span', { class: 'suave' }, `a ${comercio.distancia_km} km`)),
@@ -208,16 +209,21 @@ async function mostrarComercio(slug) {
   const horarios = comercio.horarios.map((horario) => `${DIAS[horario.dia_semana]} ${horario.apertura}–${horario.cierre}`);
   app.replaceChildren(
     h('a', { href: '/' }, '← Volver'),
-    h('h1', {}, comercio.nombre),
-    h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
-      comercio.direccion && h('span', { class: 'suave' }, `📍 ${comercio.direccion}`),
-      comercio.telefono && h('span', { class: 'suave' }, `📞 ${comercio.telefono}`)),
+    h('div', { class: 'portada', style: comercio.imagen_url ? `background-image:linear-gradient(#0000,#000a),url("${comercio.imagen_url}")` : '' },
+      h('h1', {}, comercio.nombre),
+      h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
+        comercio.direccion && h('span', {}, `📍 ${comercio.direccion}`),
+        comercio.telefono && h('span', {}, `📞 ${comercio.telefono}`))),
     comercio.descripcion && h('p', {}, comercio.descripcion),
     horarios.length > 0 && h('p', { class: 'suave' }, `Horarios: ${horarios.join(' · ')}`),
     h('h2', {}, '1. Elegí un servicio'),
-    h('div', { class: 'grilla' }, comercio.servicios.map((servicio) => h('div', { class: 'tarjeta' },
+    h('div', { class: 'grilla' }, comercio.servicios.map((servicio) => h('div', { class: `tarjeta ${servicio.oferta ? 'oferta' : ''}` },
+      servicio.oferta ? h('span', { class: 'cinta-oferta' }, '🔥 OFERTA') : null,
+      servicio.imagen_url && h('img', { class: 'servicio-imagen', src: servicio.imagen_url, alt: servicio.nombre }),
       h('strong', {}, servicio.nombre),
-      h('div', { class: 'suave' }, `${dinero(servicio.precio_centavos)} · ${servicio.duracion_min} min`),
+      h('div', { class: 'suave' }, servicio.oferta
+        ? [h('span', { class: 'precio-tachado' }, dinero(servicio.precio_centavos)), h('span', { class: 'precio-oferta' }, dinero(servicio.precio_oferta_centavos)), ` · ${servicio.duracion_min} min`]
+        : `${dinero(servicio.precio_centavos)} · ${servicio.duracion_min} min`),
       servicio.descripcion && h('p', {}, servicio.descripcion),
       servicio.caracteristicas && h('p', { class: 'suave' }, servicio.caracteristicas),
       h('button', { onclick: () => elegirServicio(servicio) }, 'Reservar')))),

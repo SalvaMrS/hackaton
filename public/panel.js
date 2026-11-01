@@ -1,6 +1,6 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen } from './dom.js';
 import { PLANTILLAS } from './plantillas.js';
-import { seccionSalon, seccionRecepcion, seccionConfiguracion } from './salon.js';
+import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
 const app = document.getElementById('app');
 const barra = document.getElementById('acciones-barra');
@@ -84,7 +84,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
   let editandoId = null;
 
   const entradas = Object.fromEntries(campos.map((campo) => {
-    const entrada = campo.opciones
+    const entrada = campo.tipo === 'imagen' ? campoImagen() : campo.opciones
       ? h('select', {}, ...campo.opciones.map(([valor, texto]) => h('option', { value: valor }, texto)))
       : h('input', { type: campo.tipo ?? 'text', value: campo.inicial ?? '', min: campo.min, step: campo.paso, required: campo.requerido });
     return [campo.nombre, entrada];
@@ -102,6 +102,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
   function limpiar() {
     editandoId = null;
     formulario.reset();
+    campos.filter((campo) => campo.tipo === 'imagen').forEach((campo) => { entradas[campo.nombre].value = ''; });
     guardar.textContent = 'Guardar';
     cancelar.hidden = true;
   }
@@ -188,27 +189,22 @@ const SECCIONES = {
       { nombre: 'duracion_min', etiqueta: 'Duración (min)', tipo: 'number', inicial: 30, min: 5, requerido: true },
       { nombre: 'caracteristicas', etiqueta: 'Características' },
       { nombre: 'descripcion', etiqueta: 'Descripción' },
+      { nombre: 'imagen_url', etiqueta: 'Imagen del servicio', tipo: 'imagen' },
+      { nombre: 'oferta', etiqueta: 'En oferta', opciones: [[0, 'No'], [1, 'Sí']] },
+      { nombre: 'precio_oferta_centavos', etiqueta: 'Precio de oferta ($)', tipo: 'number', escala: 100, inicial: 0, min: 0 },
       { nombre: 'activo', etiqueta: 'Visible', opciones: [[1, 'Sí'], [0, 'No']] },
     ],
     columnas: [
-      { etiqueta: 'Servicio', mostrar: (fila) => fila.nombre }, { etiqueta: 'Precio', mostrar: (fila) => dinero(fila.precio_centavos) },
+      { etiqueta: '', mostrar: (fila) => (fila.imagen_url ? h('img', { src: fila.imagen_url, alt: '', style: 'width:48px;height:36px;object-fit:cover;border-radius:6px' }) : '') },
+      { etiqueta: 'Servicio', mostrar: (fila) => fila.nombre },
+      { etiqueta: 'Precio', mostrar: (fila) => (fila.oferta
+        ? h('span', {}, h('span', { class: 'precio-tachado' }, dinero(fila.precio_centavos)), h('span', { class: 'precio-oferta' }, dinero(fila.precio_oferta_centavos)), ' ', h('span', { class: 'etiqueta' }, 'OFERTA'))
+        : dinero(fila.precio_centavos)) },
       { etiqueta: 'Duración', mostrar: (fila) => `${fila.duracion_min} min` }, { etiqueta: 'Características', mostrar: (fila) => fila.caracteristicas },
       { etiqueta: 'Visible', mostrar: (fila) => (fila.activo ? 'Sí' : 'No') },
     ],
   }),
-  Plazas: () => seccionCrud({
-    ruta: '/api/plazas', titulo: 'Plazas de atención (mesas, sillas, profesionales)',
-    campos: [
-      { nombre: 'nombre', etiqueta: 'Nombre', requerido: true },
-      { nombre: 'tipo', etiqueta: 'Tipo (mesa, silla…)' },
-      { nombre: 'capacidad', etiqueta: 'Capacidad (personas)', tipo: 'number', inicial: 1, min: 1, requerido: true },
-      { nombre: 'activo', etiqueta: 'Disponible', opciones: [[1, 'Sí'], [0, 'No']] },
-    ],
-    columnas: [
-      { etiqueta: 'Plaza', mostrar: (fila) => fila.nombre }, { etiqueta: 'Tipo', mostrar: (fila) => fila.tipo },
-      { etiqueta: 'Capacidad', mostrar: (fila) => fila.capacidad }, { etiqueta: 'Disponible', mostrar: (fila) => (fila.activo ? 'Sí' : 'No') },
-    ],
-  }),
+  Plazas: seccionPlazas,
   Configuración: seccionConfiguracion,
   Horarios: () => seccionCrud({
     ruta: '/api/horarios', titulo: 'Horarios de atención',
