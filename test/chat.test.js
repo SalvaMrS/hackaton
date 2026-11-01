@@ -125,3 +125,19 @@ describe('búsqueda tolerante', () => {
     assert.equal(listarComercios(db, { q: 'perro' }).length, 0);
   });
 });
+
+describe('ofertas y horario de hoy', () => {
+  it('lista las ofertas con el precio a pagar y el precio normal', async () => {
+    const db = prepararBase();
+    db.prepare('UPDATE servicios SET oferta = 1, precio_oferta_centavos = 1500000 WHERE id = 1').run();
+    const ofertas = await ejecutar(db, 'ver_ofertas', {});
+    assert.equal(ofertas.length, 1);
+    assert.match(ofertas[0].precio_a_pagar, /\$\s?15\.000/);
+    assert.match(ofertas[0].precio_normal_sin_oferta, /\$\s?20\.000/);
+  });
+
+  it('ver_comercio informa el horario de hoy', async () => {
+    const comercio = await ejecutar(prepararBase(), 'ver_comercio', { slug: 'cancha-test' });
+    assert.equal(comercio.horario_de_hoy, '10:00–23:00');
+  });
+});

@@ -26,6 +26,11 @@ const HERRAMIENTAS = [
     parameters: parametros({ texto: { type: 'string' } }, ['texto']),
   },
   {
+    name: 'ver_ofertas',
+    description: 'SOLO para cuando el cliente pregunta por ofertas o promociones: lista las vigentes con precio a pagar y precio normal. No sirve para saber el precio de un servicio.',
+    parameters: parametros({ texto: { type: 'string', description: 'opcional: rubro o servicio' } }),
+  },
+  {
     name: 'ver_comercio',
     description: 'Devuelve dirección, teléfono, horarios y servicios con precio fijo, duración y características de un comercio.',
     parameters: parametros({ slug: { type: 'string' } }, ['slug']),
@@ -92,6 +97,7 @@ function instrucciones(contexto) {
     'RESERVAS: antes de llamar a reservar mostrá el resumen (comercio, servicio, día y hora, personas, precio y a nombre de quién; por defecto el nombre del cliente identificado) y preguntá "¿Confirmo?". Al reservar informá el lugar asignado (plaza) y la dirección. Si el horario ya no está, ofrecé otros. Para cancelar: listá con mis_turnos, confirmá cuál y recién ahí llamá a cancelar_turno. Para cambiar un turno: reservá el nuevo y después cancelá el viejo, con confirmación.',
     'PRECIOS: son fijos. Informalos exactamente como los devuelven las herramientas (texto con $), sin redondear ni calcular. No hay regateo ni descuentos: si piden rebaja respondé amable que los precios son fijos, y solo mencioná las ofertas publicadas (en_oferta = true). Informá SIEMPRE y en todos los mensajes el mismo precio_a_pagar del servicio elegido; si está en oferta, aclarala una vez con el precio normal tachado (precio_normal_sin_oferta).',
     'REGLA DE ORO: jamás digas un precio, teléfono, dirección, horario ni disponibilidad que no haya devuelto una herramienta en esta conversación; si no lo tenés, llamá a la herramienta antes de responder. Si no hay lugar ese día, usá proximo_dia_con_lugar y proponelo; no mandes a llamar por teléfono salvo que no haya ninguna opción en los próximos días.',
+    'PRECIOS DE UN SERVICIO: si preguntan cuánto sale algo, buscá el comercio con buscar_comercios y consultá sus precios con ver_comercio (mostrá el servicio pedido y, si hay, la oferta relacionada). OFERTAS: para "qué ofertas hay" usá ver_ofertas. HORARIOS DE ATENCIÓN: usá horarios y horario_de_hoy de ver_comercio. Si preguntan algo que ninguna herramienta contesta (estacionamiento, medios de pago, etc.), decí que no tenés ese dato y ofrecé el teléfono del comercio.',
     'DATOS: usá siempre las herramientas para precios, horarios y disponibilidad; nunca inventes. Identificá el comercio por su slug (o nombre) y el servicio por su nombre exacto; nunca uses ids numéricos de servicio. Si buscar_comercios no devuelve resultados, probá con una palabra más corta o con texto vacío.',
     'FORMATO: mensajes cortos, texto plano con saltos de línea, sin títulos ni listas con guiones largos. Para resaltar usá *un asterisco* a cada lado (nunca doble) solo en una palabra o frase corta, por ejemplo *Fútbol 5 La Terraza*; no uses asteriscos en listas ni en líneas con dos puntos. Podés usar algún emoji. Al final de tu mensaje, cuando convenga ofrecer opciones tocables, agregá UNA última línea con este formato exacto: [Opciones: Hoy | Mañana | Esta semana] (máximo 4 opciones cortas, sin repetir lo que ya está en el texto).',
     'Si no podés resolver algo, decí que puede llamar o escribir al comercio (teléfono en ver_comercio).',
@@ -183,6 +189,20 @@ function turnosCercanos(db, argumentos, contexto) {
   });
 }
 
+function ofertasVigentes(db, texto, contexto) {
+  return listarComercios(db, { q: texto ?? '', lat: contexto.lat, lng: contexto.lng }).flatMap((comercio) =>
+    detalleComercio(db, comercio.slug).servicios.filter((servicio) => servicio.oferta).map((servicio) => ({
+      comercio: comercio.nombre, slug: comercio.slug, distancia_km: comercio.distancia_km, servicio: servicio.nombre,
+      precio_a_pagar: precioTexto(servicio.precio_oferta_centavos), precio_normal_sin_oferta: precioTexto(servicio.precio_centavos), duracion_min: servicio.duracion_min,
+    })));
+}
+
+function horarioDeHoy(horarios) {
+  const hoy = new Date(`${ahoraLocal().slice(0, 10)}T00:00:00Z`).getUTCDay();
+  const delDia = horarios.filter(({ dia_semana: dia }) => dia === hoy).map(({ apertura, cierre }) => `${apertura}–${cierre}`);
+  return delDia.length ? delDia.join(' y ') : 'cerrado hoy';
+}
+
 function turnosDelCliente(db, usuarioId) {
   return db.prepare(
     `SELECT t.id, t.inicio, t.estado, t.personas, s.nombre AS servicio, p.nombre AS plaza, c.nombre AS comercio, c.slug, c.direccion
@@ -200,12 +220,18 @@ function ejecutarHerramienta(db, nombre, argumentos, contexto) {
     case 'buscar_comercios':
       return listarComercios(db, { q: argumentos.texto, lat: contexto.lat, lng: contexto.lng })
         .slice(0, 5)
-        .map(({ slug, nombre: comercio, rubro, direccion, servicios, distancia_km: distancia }) => ({ slug, nombre: comercio, rubro, direccion, servicios, distancia_km: distancia }));
+        .map(({ slug, nombre: comercio, rubro, direccion, servicios, distancia_km: distancia }) => ({
+          slug, nombre: comercio, rubro, direccion, servicios, distancia_km: distancia,
+          ofertas: ofertasVigentes(db, comercio, contexto).filter((oferta) => oferta.slug === slug).map(({ servicio, precio_a_pagar: precio }) => `${servicio} ${precio}`),
+        }));
+    case 'ver_ofertas':
+      return ofertasVigentes(db, argumentos.texto, contexto);
     case 'ver_comercio': {
       const comercio = resolverComercio(db, argumentos.slug);
       return {
         slug: comercio.slug, nombre: comercio.nombre, rubro: comercio.rubro, descripcion: comercio.descripcion, direccion: comercio.direccion,
-        telefono: comercio.telefono, horarios: resumirHorarios(comercio.horarios), capacidad_maxima_por_reserva: comercio.capacidad_maxima,
+        telefono: comercio.telefono, horarios: resumirHorarios(comercio.horarios), horario_de_hoy: horarioDeHoy(comercio.horarios),
+        capacidad_maxima_por_reserva: comercio.capacidad_maxima,
         servicios: comercio.servicios.map(servicioParaModelo),
       };
     }
