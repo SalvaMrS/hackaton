@@ -217,7 +217,7 @@ const SECCIONES = {
       { etiqueta: 'Duración', mostrar: (fila) => `${fila.duracion_min} min` }, { etiqueta: 'Características', mostrar: (fila) => fila.caracteristicas },
       { etiqueta: 'Visible', mostrar: (fila) => (fila.activo ? 'Sí' : 'No') },
     ],
-  )),
+  })),
   Plazas: seccionPlazas,
   Configuración: seccionConfiguracion,
   Horarios: () => seccionCrud({
