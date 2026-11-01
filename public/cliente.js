@@ -26,7 +26,7 @@ function dibujarBarra() {
     h('a', { class: 'boton secundario', href: '/panel.html' }, 'Soy un comercio'));
 }
 
-function formularioIngreso({ alIngresar }) {
+function formularioIngreso({ alIngresar, titulo = 'Ingresá para confirmar tu reserva' }) {
   const email = h('input', { type: 'email', placeholder: 'tu@email.com', required: true });
   const password = h('input', { type: 'password', placeholder: 'Contraseña (mín. 6)', required: true });
   const mensaje = h('p');
@@ -40,7 +40,7 @@ function formularioIngreso({ alIngresar }) {
   };
   const destino = encodeURIComponent(slugActual ? `/?c=${slugActual}` : '/');
   return h('form', { class: 'tarjeta formulario', onsubmit: enviar('/api/auth/login') },
-    h('strong', { style: 'grid-column:1/-1' }, 'Ingresá para confirmar tu reserva'),
+    h('strong', { style: 'grid-column:1/-1' }, titulo),
     email, password,
     h('div', { class: 'fila' },
       h('button', { type: 'submit' }, 'Ingresar'),
@@ -264,6 +264,16 @@ async function mostrarComercio(slug) {
     pasoReserva);
 }
 
+function mostrarIngreso() {
+  const alIngresar = () => app.replaceChildren(
+    h('h1', { class: 'mensaje-ok' }, '¡Listo, ya ingresaste!'),
+    h('p', {}, 'Volvé al chat para seguir con tu reserva.'),
+    h('div', { class: 'fila' }, h('button', { onclick: () => window.close() }, 'Cerrar esta pestaña'), h('a', { class: 'boton secundario', href: '/' }, 'Ir al inicio')));
+  app.replaceChildren(h('h1', {}, 'Ingresá a tu cuenta'), formularioIngreso({ alIngresar, titulo: 'Usuario y contraseña' }));
+}
+
 await cargarSesion();
 const slug = new URLSearchParams(location.search).get('c');
-if (slug) await mostrarComercio(slug); else await mostrarBuscador();
+if (new URLSearchParams(location.search).has('ingresar') && !sesion.usuario) mostrarIngreso();
+else if (slug) await mostrarComercio(slug);
+else await mostrarBuscador();

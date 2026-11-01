@@ -29,6 +29,11 @@ function leerReserva(body) {
 export function rutasPublicas(app) {
   const { db } = app;
 
+  const contextoDelChat = (req) => {
+    const usuario = usuarioActual(app, req);
+    return { ...leerContextoChat(req.body?.contexto), usuarioId: usuario?.id ?? null, usuarioNombre: usuario?.nombre || usuario?.email || '' };
+  };
+
   app.get('/api/rubros', async () =>
     db.prepare('SELECT MIN(rubro) AS rubro FROM comercios GROUP BY lower(rubro) ORDER BY lower(rubro)').all().map(({ rubro }) => rubro));
 
@@ -72,7 +77,8 @@ export function rutasPublicas(app) {
   app.post('/api/chat', { config: { rateLimit: { max: LIMITE_CHAT_POR_MINUTO, timeWindow: '1 minute' } } }, async (req) =>
     responderChat(db, {
       mensajes: req.body?.mensajes,
-      contexto: { ...leerContextoChat(req.body?.contexto), usuarioId: usuarioActual(app, req)?.id ?? null },
+      contexto: contextoDelChat(req),
+      alFallarHerramienta: (herramienta, motivo) => req.log.warn({ herramienta, motivo }, 'falló una herramienta del asistente'),
     }));
 
   const antes = { preHandler: exigirComercio(app) };

@@ -2,11 +2,13 @@ import { h, api } from "./dom.js";
 
 const MENSAJE_INICIAL = "Hola! Soy el asistente de turnos. Puedo buscar comercios cerca tuyo, mostrarte precios y horarios libres, y reservar por vos.";
 const RESPUESTAS_RAPIDAS = [
-  "Comercios cerca de mi",
-  "Quiero reservar un turno",
-  "Que ofertas hay?",
-  "Ver mis horarios disponibles",
+  "Busco un turno cerca mío",
+  "Ver mis turnos",
+  "¿Qué ofertas hay?",
+  "Cancelar un turno",
 ];
+const FORMATO_OPCIONES = /\n?\[Opciones:\s*([^\]]+)\]\s*$/i;
+const FORMATO_NEGRITA = /(\*[^*\n]+\*)/;
 const CLAVE_GUARDADO = "chat-mensajes";
 const ALTURA_MAXIMA_ENTRADA = 98;
 const NS_SVG = "http://www.w3.org/2000/svg";
@@ -46,9 +48,24 @@ function horaActual() {
   return `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
 }
 
+function separarOpciones(contenido) {
+  const coincidencia = FORMATO_OPCIONES.exec(contenido);
+  if (!coincidencia) return { texto: contenido, opciones: [] };
+  const opciones = coincidencia[1].split("|").map((opcion) => opcion.trim()).filter(Boolean);
+  return { texto: contenido.slice(0, coincidencia.index).trimEnd(), opciones };
+}
+
+function textoConFormato(contenido) {
+  return contenido.split(FORMATO_NEGRITA).map((parte) => (
+    parte.length > 2 && parte.startsWith("*") && parte.endsWith("*")
+      ? h("strong", {}, parte.slice(1, -1))
+      : document.createTextNode(parte.replace(/\*/g, "").replace(/^- /gm, "• "))
+  ));
+}
+
 function crearBurbuja(mensaje) {
   const texto = h("span", { class: "texto" });
-  texto.textContent = mensaje.content;
+  texto.append(...textoConFormato(separarOpciones(mensaje.content).texto));
   const hora = h("span", { class: "hora" }, horaActual());
   if (mensaje.role === "user") hora.append(h("span", { class: "tilde" }, "✓✓"));
   const clase = mensaje.role === "user" ? "burbuja usuario" : "burbuja asistente";
@@ -64,9 +81,11 @@ function agregarMensaje(mensaje) {
   desplazarAlFinal();
 }
 
-function mostrarChips() {
+function mostrarChips(opciones = RESPUESTAS_RAPIDAS) {
+  ocultarChips();
+  if (!opciones.length) return;
   chips = h("div", { class: "chips" });
-  for (const texto of RESPUESTAS_RAPIDAS) {
+  for (const texto of opciones) {
     chips.append(h("button", { type: "button", class: "chip", onclick: () => enviar(texto) }, texto));
   }
   contenedor.append(chips);
@@ -101,6 +120,35 @@ function crearIconoEnviar() {
   flecha.setAttribute("d", "M2.01 21 23 12 2.01 3 2 10l15 2-15 2z");
   icono.append(flecha);
   return icono;
+}
+
+const estado = document.getElementById("estado");
+
+function pedirUbicacion() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    ({ coords }) => {
+      try {
+        localStorage.setItem("ubicacion", JSON.stringify({ lat: coords.latitude, lng: coords.longitude }));
+      } catch { /* sin almacenamiento: se usa solo en esta consulta */ }
+      actualizarEstado();
+    },
+    () => actualizarEstado(),
+    { timeout: 10000 },
+  );
+}
+
+async function actualizarEstado() {
+  const { usuario } = await api("/api/yo").catch(() => ({ usuario: null }));
+  const conUbicacion = leerUbicacion().lat != null;
+  estado.replaceChildren(
+    usuario
+      ? h("span", { class: "ok" }, `✔ Sesión: ${usuario.nombre || usuario.email}`)
+      : h("button", { type: "button", onclick: () => window.open("/?ingresar=1", "_blank") }, "Ingresar para reservar"),
+    conUbicacion
+      ? h("span", { class: "ok" }, "📍 Ubicación activada")
+      : h("button", { type: "button", onclick: pedirUbicacion }, "📍 Activar ubicación"),
+  );
 }
 
 function leerUbicacion() {
@@ -152,6 +200,7 @@ async function enviar(texto) {
     guardarMensajes();
     ocultarEscribiendo();
     agregarMensaje(mensajeAsistente);
+    mostrarChips(separarOpciones(respuesta).opciones);
   } catch (error) {
     mensajes.pop();
     guardarMensajes();
@@ -167,8 +216,13 @@ async function enviar(texto) {
 function iniciar() {
   document.title = "Asistente de turnos";
   botonEnviar.append(crearIconoEnviar());
-  if (!conversacionRestaurada) mostrarChips();
   for (const mensaje of mensajes) contenedor.append(crearBurbuja(mensaje));
+  const ultimo = mensajes.at(-1);
+  if (!conversacionRestaurada) mostrarChips();
+  else if (ultimo.role === "assistant") mostrarChips(separarOpciones(ultimo.content).opciones);
+  actualizarEstado();
+  if (leerUbicacion().lat == null) pedirUbicacion();
+  window.addEventListener("focus", actualizarEstado);
   guardarMensajes();
   ajustarAltura();
   desplazarAlFinal();

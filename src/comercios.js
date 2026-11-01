@@ -28,7 +28,7 @@ export function detalleComercio(db, slug) {
   };
 }
 
-const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+export const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
 function coincide(comercio, { q, rubro }) {
   if (rubro && normalizar(comercio.rubro) !== normalizar(rubro)) return false;
