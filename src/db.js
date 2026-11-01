@@ -59,6 +59,11 @@ CREATE TABLE IF NOT EXISTS turnos (
   codigo TEXT NOT NULL UNIQUE,
   creado_en TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS guias (
+  id INTEGER PRIMARY KEY,
+  comercio_id INTEGER NOT NULL REFERENCES comercios(id),
+  x1 REAL NOT NULL, y1 REAL NOT NULL, x2 REAL NOT NULL, y2 REAL NOT NULL
+);
 CREATE INDEX IF NOT EXISTS idx_turnos_plaza_inicio ON turnos(plaza_id, inicio);
 CREATE INDEX IF NOT EXISTS idx_turnos_comercio_inicio ON turnos(comercio_id, inicio);
 `;
@@ -66,6 +71,8 @@ CREATE INDEX IF NOT EXISTS idx_turnos_comercio_inicio ON turnos(comercio_id, ini
 const COLUMNAS_NUEVAS = [
   ['plazas', 'pos_x', 'REAL'],
   ['plazas', 'pos_y', 'REAL'],
+  ['plazas', 'descripcion', "TEXT NOT NULL DEFAULT ''"],
+  ['turnos', 'usuario_id', 'INTEGER REFERENCES usuarios(id)'],
   ['comercios', 'aviso_min', 'INTEGER NOT NULL DEFAULT 30'],
   ['comercios', 'tolerancia_min', 'INTEGER NOT NULL DEFAULT 10'],
   ['comercios', 'ausente_min', 'INTEGER NOT NULL DEFAULT 30'],

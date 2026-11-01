@@ -50,7 +50,7 @@ function instrucciones(contexto) {
     'Sos el asistente de turnos de una plataforma de reservas para comercios. Respondé en español rioplatense, breve y amable.',
     `Ahora es ${ahoraLocal().replace('T', ' ')} (hora de Argentina). ${ubicacion} ${foco}`,
     'Usá siempre las herramientas para precios, horarios y disponibilidad: nunca inventes datos.',
-    'Antes de reservar confirmá servicio, fecha y hora, cantidad de personas si aplica, y a nombre de quién va. Al reservar, informá el código de confirmación.',
+    'Antes de reservar confirmá servicio, fecha y hora, cantidad de personas si aplica, y a nombre de quién va. Si reservar falla porque falta iniciar sesión, pedile que ingrese desde la página y vuelva a intentar. Al reservar, informá la plaza asignada y el horario.',
     'Si no podés resolver algo, decí que el cliente puede llamar o escribir al comercio.',
   ].join('\n');
 }
@@ -70,9 +70,10 @@ function ejecutarHerramienta(db, nombre, argumentos, contexto) {
       }).slice(0, MAX_FRANJAS_MOSTRADAS).map(({ inicio }) => inicio);
     }
     case 'reservar': {
+      if (!contexto.usuarioId) return { error: 'El cliente debe iniciar sesión en la página para poder reservar' };
       const comercio = detalleComercio(db, argumentos.slug);
       return reservarTurno(db, {
-        comercioId: comercio.id, servicioId: argumentos.servicio_id, inicio: argumentos.inicio, personas: argumentos.personas ?? 1,
+        usuarioId: contexto.usuarioId, comercioId: comercio.id, servicioId: argumentos.servicio_id, inicio: argumentos.inicio, personas: argumentos.personas ?? 1,
         clienteNombre: argumentos.cliente_nombre, clienteTelefono: argumentos.cliente_telefono ?? '',
       });
     }

@@ -43,9 +43,19 @@ function leerPlaza(body) {
   return {
     nombre: textoRequerido(body.nombre, 'nombre', 80),
     tipo: textoOpcional(body.tipo, 'tipo', 40),
+    descripcion: textoOpcional(body.descripcion, 'descripcion'),
     capacidad: enteroEnRango(body.capacidad ?? 1, 'capacidad', 1, 500),
     activo: body.activo === false || body.activo === 0 ? 0 : 1,
   };
+}
+
+function leerGuia(body) {
+  const punto = (valor, campo) => {
+    const numero = Number(valor);
+    if (!Number.isFinite(numero) || numero < 0 || numero > 100) throw errorHttp(400, 'campo_invalido', `${campo} debe estar entre 0 y 100`);
+    return numero;
+  };
+  return { x1: punto(body.x1, 'x1'), y1: punto(body.y1, 'y1'), x2: punto(body.x2, 'x2'), y2: punto(body.y2, 'y2') };
 }
 
 function leerHorario(body) {
@@ -137,7 +147,10 @@ export function rutasComercio(app) {
   });
   registrarCrud(app, {
     ruta: '/api/plazas', tabla: 'plazas', orden: 'nombre', leer: leerPlaza,
-    columnas: ['nombre', 'tipo', 'capacidad', 'activo'],
+    columnas: ['nombre', 'tipo', 'descripcion', 'capacidad', 'activo'],
+  });
+  registrarCrud(app, {
+    ruta: '/api/guias', tabla: 'guias', orden: 'id', leer: leerGuia, columnas: ['x1', 'y1', 'x2', 'y2'],
   });
   registrarCrud(app, {
     ruta: '/api/horarios', tabla: 'horarios', orden: 'dia_semana, apertura', leer: leerHorario,

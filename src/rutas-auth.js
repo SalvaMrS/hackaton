@@ -83,9 +83,11 @@ export function rutasAuth(app) {
     return { usuario, googleHabilitado: googleHabilitado() };
   });
 
-  app.get('/api/auth/google', async (_req, reply) => {
+  app.get('/api/auth/google', async (req, reply) => {
     if (!googleHabilitado()) throw errorHttp(404, 'google_deshabilitado', 'Google no está configurado');
     const estado = randomBytes(16).toString('hex');
+    const destino = req.query.destino === '/panel.html' ? '/panel.html' : '/';
+    reply.setCookie('oauth_destino', destino, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
     reply.setCookie('oauth_estado', estado, { signed: true, httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
     const parametros = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID,
@@ -106,6 +108,7 @@ export function rutasAuth(app) {
     const perfil = await canjearCodigoGoogle(req.query.code);
     iniciarSesion(reply, buscarOCrearUsuarioGoogle(db, perfil));
     reply.clearCookie('oauth_estado', { path: '/' });
-    return reply.redirect('/panel.html');
+    reply.clearCookie('oauth_destino', { path: '/' });
+    return reply.redirect(req.cookies.oauth_destino === '/panel.html' ? '/panel.html' : '/');
   });
 }

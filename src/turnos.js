@@ -85,7 +85,7 @@ function generarCodigo() {
 }
 
 export function reservarTurno(db, datos, ahora = ahoraLocal()) {
-  const { comercioId, servicioId, inicio, personas = 1, clienteNombre, clienteTelefono = '', plazaId } = datos;
+  const { comercioId, servicioId, inicio, personas = 1, clienteNombre, clienteTelefono = '', plazaId, usuarioId = null } = datos;
   const servicio = obtenerServicioActivo(db, comercioId, servicioId);
   const fecha = validarFecha(inicio?.slice(0, 10));
 
@@ -98,9 +98,9 @@ export function reservarTurno(db, datos, ahora = ahoraLocal()) {
 
     const codigo = generarCodigo();
     const { lastInsertRowid } = db.prepare(
-      `INSERT INTO turnos (comercio_id, servicio_id, plaza_id, inicio, fin, cliente_nombre, cliente_telefono, personas, codigo)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    ).run(comercioId, servicioId, plaza.id, inicio, sumarMinutos(inicio, servicio.duracion_min), clienteNombre, clienteTelefono, personas, codigo);
+      `INSERT INTO turnos (comercio_id, servicio_id, plaza_id, inicio, fin, cliente_nombre, cliente_telefono, personas, codigo, usuario_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).run(comercioId, servicioId, plaza.id, inicio, sumarMinutos(inicio, servicio.duracion_min), clienteNombre, clienteTelefono, personas, codigo, usuarioId);
     db.exec('COMMIT');
     return { id: Number(lastInsertRowid), codigo, plaza: plaza.nombre, inicio, servicio: servicio.nombre };
   } catch (error) {

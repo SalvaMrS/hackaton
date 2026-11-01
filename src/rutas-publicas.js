@@ -1,4 +1,4 @@
-import { errorHttp, exigirComercio } from './auth.js';
+import { errorHttp, exigirComercio, exigirUsuario, usuarioActual } from './auth.js';
 import { textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional } from './validacion.js';
 import { calcularDisponibilidad, reservarTurno, validarFecha } from './turnos.js';
 import { listarComercios, detalleComercio, buscarComercioPorSlug } from './comercios.js';
@@ -43,34 +43,34 @@ export function rutasPublicas(app) {
     });
   });
 
-  app.post('/api/comercios/:slug/turnos', async (req, reply) => {
+  app.post('/api/comercios/:slug/turnos', { preHandler: exigirUsuario(app) }, async (req, reply) => {
     const comercio = buscarComercioPorSlug(db, req.params.slug);
-    const turno = reservarTurno(db, { comercioId: comercio.id, ...leerReserva(req.body ?? {}) });
+    const turno = reservarTurno(db, { comercioId: comercio.id, usuarioId: req.usuario.id, ...leerReserva(req.body ?? {}) });
     return reply.status(201).send(turno);
   });
 
-  const buscarPorCodigo = (codigo) => {
-    const turno = db.prepare(
-      `SELECT t.codigo, t.inicio, t.fin, t.estado, t.personas, t.cliente_nombre, s.nombre AS servicio, p.nombre AS plaza,
-              c.nombre AS comercio, c.slug, c.direccion, c.telefono, c.lat, c.lng
-       FROM turnos t JOIN servicios s ON s.id = t.servicio_id JOIN plazas p ON p.id = t.plaza_id JOIN comercios c ON c.id = t.comercio_id
-       WHERE t.codigo = ?`,
-    ).get(String(codigo).toUpperCase());
-    if (!turno) throw errorHttp(404, 'turno_no_encontrado', 'No existe un turno con ese código');
-    return turno;
-  };
+  const soloCliente = { preHandler: exigirUsuario(app) };
 
-  app.get('/api/turnos/codigo/:codigo', async (req) => buscarPorCodigo(req.params.codigo));
+  app.get('/api/mis-turnos', soloCliente, async (req) => db.prepare(
+    `SELECT t.id, t.inicio, t.fin, t.estado, t.personas, t.cliente_nombre, s.nombre AS servicio, p.nombre AS plaza,
+            c.nombre AS comercio, c.slug, c.direccion, c.telefono, c.lat, c.lng
+     FROM turnos t JOIN servicios s ON s.id = t.servicio_id JOIN plazas p ON p.id = t.plaza_id JOIN comercios c ON c.id = t.comercio_id
+     WHERE t.usuario_id = ? ORDER BY t.inicio DESC LIMIT 50`,
+  ).all(req.usuario.id));
 
-  app.post('/api/turnos/codigo/:codigo/cancelar', async (req) => {
-    const turno = buscarPorCodigo(req.params.codigo);
+  app.post('/api/mis-turnos/:id/cancelar', soloCliente, async (req) => {
+    const turno = db.prepare('SELECT id, estado FROM turnos WHERE id = ? AND usuario_id = ?').get(Number(req.params.id), req.usuario.id);
+    if (!turno) throw errorHttp(404, 'turno_no_encontrado', 'No existe ese turno');
     if (turno.estado !== 'confirmado') throw errorHttp(409, 'no_cancelable', 'Este turno ya no se puede cancelar');
-    db.prepare("UPDATE turnos SET estado = 'cancelado' WHERE codigo = ?").run(turno.codigo);
-    return { ...turno, estado: 'cancelado' };
+    db.prepare("UPDATE turnos SET estado = 'cancelado' WHERE id = ?").run(turno.id);
+    return { id: turno.id, estado: 'cancelado' };
   });
 
   app.post('/api/chat', { config: { rateLimit: { max: LIMITE_CHAT_POR_MINUTO, timeWindow: '1 minute' } } }, async (req) =>
-    responderChat(db, { mensajes: req.body?.mensajes, contexto: leerContextoChat(req.body?.contexto) }));
+    responderChat(db, {
+      mensajes: req.body?.mensajes,
+      contexto: { ...leerContextoChat(req.body?.contexto), usuarioId: usuarioActual(app, req)?.id ?? null },
+    }));
 
   const antes = { preHandler: exigirComercio(app) };
 

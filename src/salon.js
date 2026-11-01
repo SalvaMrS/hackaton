@@ -23,7 +23,7 @@ export function situacionDelTurno(turno, comercio, ahora) {
 
 function turnosVigentes(db, comercioId, ahora) {
   return db.prepare(
-    `SELECT t.id, t.plaza_id, t.inicio, t.fin, t.estado, t.cliente_nombre, t.cliente_telefono, t.personas, t.codigo,
+    `SELECT t.id, t.plaza_id, t.inicio, t.fin, t.estado, t.cliente_nombre, t.cliente_telefono, t.personas,
             s.nombre AS servicio, p.nombre AS plaza
      FROM turnos t JOIN servicios s ON s.id = t.servicio_id JOIN plazas p ON p.id = t.plaza_id
      WHERE t.comercio_id = ? AND t.estado IN ('confirmado', 'en_curso') AND t.fin > ? AND substr(t.inicio, 1, 10) = ?
@@ -32,10 +32,10 @@ function turnosVigentes(db, comercioId, ahora) {
 }
 
 export function estadoDelSalon(db, comercio, ahora = ahoraLocal()) {
-  const plazas = db.prepare('SELECT id, nombre, tipo, capacidad, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND activo = 1 ORDER BY id').all(comercio.id);
-  const turnos = turnosVigentes(db, comercio.id, ahora)
-    .map((turno) => ({ ...turno, ...situacionDelTurno(turno, comercio, ahora) }))
-    .filter((turno) => turno.situacion !== 'proximo' || turno.minutos <= comercio.aviso_min);
+  const plazas = db.prepare('SELECT id, nombre, tipo, descripcion, capacidad, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND activo = 1 ORDER BY id').all(comercio.id);
+  const todosLosTurnos = turnosVigentes(db, comercio.id, ahora)
+    .map((turno) => ({ ...turno, ...situacionDelTurno(turno, comercio, ahora) }));
+  const turnos = todosLosTurnos.filter((turno) => turno.situacion !== 'proximo' || turno.minutos <= comercio.aviso_min);
 
   return plazas.map((plaza, indice) => {
     const turno = turnos.find((candidato) => candidato.plaza_id === plaza.id) ?? null;
@@ -46,6 +46,7 @@ export function estadoDelSalon(db, comercio, ahora = ahoraLocal()) {
       y: plaza.pos_y ?? porDefecto.y,
       estado: turno ? turno.situacion : 'libre',
       turno,
+      proximos: todosLosTurnos.filter((candidato) => candidato.plaza_id === plaza.id),
     };
   });
 }
@@ -54,7 +55,7 @@ export function buscarEnRecepcion(db, comercio, consulta, ahora = ahoraLocal()) 
   const texto = consulta.trim().toLowerCase();
   if (!texto) return [];
   return turnosVigentes(db, comercio.id, ahora)
-    .filter((turno) => turno.cliente_nombre.toLowerCase().includes(texto) || turno.codigo.toLowerCase() === texto)
+    .filter((turno) => turno.cliente_nombre.toLowerCase().includes(texto))
     .map((turno) => ({ ...turno, ...situacionDelTurno(turno, comercio, ahora) }));
 }
 
