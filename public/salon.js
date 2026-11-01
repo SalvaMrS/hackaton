@@ -62,7 +62,9 @@ export function seccionConfiguracion() {
     ['tolerancia_min', 'Tolerancia: pasado este tiempo figura "demorado" (min)', 'number'],
     ['ausente_min', 'Marcar "no se presentó" tras (min)', 'number'],
   ];
-  const entradas = Object.fromEntries(campos.map(([nombre, , tipo]) => [nombre, tipo === 'imagen' ? campoImagen() : h('input', { type: tipo, step: 'any' })]));
+  const entradas = Object.fromEntries(campos.map(([nombre, , tipo]) => [nombre, tipo === 'imagen' ? campoImagen() : h('input', { type: tipo, step: 'any', list: nombre === 'rubro' ? 'rubros-config' : null })]));
+  const opcionesRubro = h('datalist', { id: 'rubros-config' });
+  api('/api/rubros').then((rubros) => opcionesRubro.append(...rubros.map((valor) => h('option', { value: valor })))).catch(() => {});
 
   async function guardar(evento) {
     evento.preventDefault();
@@ -80,7 +82,7 @@ export function seccionConfiguracion() {
 
   contenedor.append(h('h2', { style: 'margin-top:0' }, 'Configuración del comercio'),
     h('form', { class: 'formulario tarjeta', onsubmit: guardar },
-      ...campos.map(([nombre, etiqueta]) => h('label', {}, etiqueta, entradas[nombre])), h('button', { type: 'submit' }, 'Guardar')), mensaje);
+      ...campos.map(([nombre, etiqueta]) => h('label', {}, etiqueta, entradas[nombre])), opcionesRubro, h('button', { type: 'submit' }, 'Guardar')), mensaje);
   return contenedor;
 }
 
@@ -129,6 +131,11 @@ export function seccionPlazas() {
     nombre: h('input', { required: true, maxlength: 80 }),
     tipo: h('input', { maxlength: 40, placeholder: 'mesa, silla, sillón…' }),
     capacidad: h('input', { type: 'number', min: 1, value: 2, required: true }),
+    forma: h('select', {}, h('option', { value: 'circulo' }, 'Círculo / óvalo'), h('option', { value: 'rectangulo' }, 'Rectángulo / cuadrado')),
+    ancho: h('input', { type: 'number', min: 3, max: 70, step: 0.5, value: 9 }),
+    alto: h('input', { type: 'number', min: 3, max: 70, step: 0.5, value: 9 }),
+    colorPropio: h('input', { type: 'checkbox' }),
+    color: h('input', { type: 'color', value: '#3b82f6' }),
     descripcion: h('textarea', { rows: 3, maxlength: 500, placeholder: 'Ubicación, comodidades, restricciones…' }),
     activo: h('select', {}, h('option', { value: 1 }, 'Disponible'), h('option', { value: 0 }, 'Desactivada')),
   };
@@ -137,6 +144,10 @@ export function seccionPlazas() {
   const formulario = h('form', { class: 'tarjeta formulario', style: 'grid-template-columns:1fr', onsubmit: guardar },
     titulo, h('label', {}, 'Nombre', entradas.nombre), h('label', {}, 'Tipo', entradas.tipo),
     h('label', {}, 'Capacidad (personas)', entradas.capacidad), h('label', {}, 'Descripción', entradas.descripcion),
+    h('label', {}, 'Forma', entradas.forma),
+    h('div', { class: 'fila' }, h('label', {}, 'Ancho', entradas.ancho), h('label', {}, 'Alto', entradas.alto)),
+    h('div', { class: 'fila' }, h('label', { style: 'flex-direction:row;align-items:center' }, entradas.colorPropio, 'Color propio'), entradas.color),
+    h('p', { class: 'suave', style: 'margin:0' }, 'El borde sigue mostrando el estado (libre, ocupada…). También podés cambiar el tamaño arrastrando el cuadradito de la esquina.'),
     h('label', {}, 'Estado', entradas.activo),
     h('div', { class: 'fila' }, h('button', { type: 'submit' }, 'Guardar'),
       h('button', { type: 'button', class: 'secundario', onclick: () => cargarFormulario(null) }, 'Nueva'), quitar));
@@ -150,6 +161,11 @@ export function seccionPlazas() {
     entradas.capacidad.value = plaza?.capacidad ?? 2;
     entradas.descripcion.value = plaza?.descripcion ?? '';
     entradas.activo.value = plaza?.activo ?? 1;
+    entradas.forma.value = plaza?.forma ?? 'circulo';
+    entradas.ancho.value = plaza?.ancho ?? 9;
+    entradas.alto.value = plaza?.alto ?? 9;
+    entradas.colorPropio.checked = Boolean(plaza?.color);
+    entradas.color.value = plaza?.color || '#3b82f6';
     if (!plaza) lienzo.deseleccionar();
   }
 
@@ -170,6 +186,8 @@ export function seccionPlazas() {
     const cuerpo = {
       nombre: entradas.nombre.value, tipo: entradas.tipo.value, capacidad: Number(entradas.capacidad.value),
       descripcion: entradas.descripcion.value, activo: Number(entradas.activo.value),
+      forma: entradas.forma.value, ancho: Number(entradas.ancho.value), alto: Number(entradas.alto.value),
+      color: entradas.colorPropio.checked ? entradas.color.value : '',
     };
     try {
       await api(plazaEnFormulario ? `/api/plazas/${plazaEnFormulario.id}` : '/api/plazas',

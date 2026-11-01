@@ -1,5 +1,5 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen } from './dom.js';
-import { PLANTILLAS } from './plantillas.js';
+import { PLANTILLAS, plantillaPara } from './plantillas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
 const app = document.getElementById('app');
@@ -10,7 +10,7 @@ async function iniciar() {
   if (!usuario) return mostrarLogin(googleHabilitado);
   barra.replaceChildren(h('span', { class: 'suave' }, usuario.email),
     h('button', { class: 'secundario', onclick: async () => { await api('/api/auth/salir', { metodo: 'POST' }); location.reload(); } }, 'Salir'));
-  if (!usuario.comercio_id) return mostrarAlta();
+  if (!usuario.comercio_id) return await mostrarAlta();
   return mostrarPanel();
 }
 
@@ -35,8 +35,11 @@ function mostrarLogin(googleHabilitado) {
     mensaje));
 }
 
-function mostrarAlta() {
-  const rubro = h('select', {}, ...Object.keys(PLANTILLAS).map((clave) => h('option', { value: clave }, clave)));
+async function mostrarAlta() {
+  const registrados = await api('/api/rubros').catch(() => []);
+  const sugeridos = [...new Set([...registrados, ...Object.keys(PLANTILLAS).filter((clave) => clave !== 'otro')])];
+  const rubro = h('input', { list: 'rubros', required: true, maxlength: 40, placeholder: 'Escribí tu rubro: peluquería, cancha de fútbol…', autocomplete: 'off' });
+  const opcionesRubro = h('datalist', { id: 'rubros' }, ...sugeridos.map((valor) => h('option', { value: valor })));
   const campos = {
     nombre: h('input', { required: true, maxlength: 80 }),
     direccion: h('input', { maxlength: 200 }),
@@ -56,16 +59,16 @@ function mostrarAlta() {
       await api('/api/comercio', { metodo: 'POST', cuerpo: {
         nombre: campos.nombre.value, rubro: rubro.value, direccion: campos.direccion.value, telefono: campos.telefono.value,
         lat: campos.lat.value, lng: campos.lng.value } });
-      await cargarPlantilla(PLANTILLAS[rubro.value]);
+      await cargarPlantilla(plantillaPara(rubro.value));
       iniciar();
     } catch (error) { mostrarError(mensaje, error); }
   }
 
   app.replaceChildren(h('div', { class: 'tarjeta centrado', style: 'max-width:520px' },
     h('h1', {}, 'Creá tu comercio'),
-    h('p', { class: 'suave' }, 'Elegí un rubro y te cargamos servicios, plazas y horarios de ejemplo para que edites.'),
+    h('p', { class: 'suave' }, 'Si tu rubro es conocido te cargamos servicios, plazas y horarios de ejemplo para que edites.'),
     h('form', { class: 'formulario', style: 'grid-template-columns:1fr', onsubmit: crear },
-      h('label', {}, 'Nombre', campos.nombre), h('label', {}, 'Rubro', rubro),
+      h('label', {}, 'Nombre', campos.nombre), h('label', {}, 'Rubro (escribilo o elegí uno existente)', rubro, opcionesRubro),
       h('label', {}, 'Dirección', campos.direccion), h('label', {}, 'Teléfono', campos.telefono),
       h('div', { class: 'fila' }, h('label', {}, 'Latitud', campos.lat), h('label', {}, 'Longitud', campos.lng),
         h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Usar mi ubicación')),

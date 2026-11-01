@@ -29,5 +29,23 @@ export const PLANTILLAS = {
     plazas: [{ nombre: 'Consultorio 1', tipo: 'Consultorio', capacidad: 1 }],
     dias: SEMANA_LABORAL, apertura: '08:00', cierre: '13:00',
   },
+  cancha: {
+    servicios: [
+      { nombre: 'Alquiler de cancha 1 hora', duracion_min: 60, precio_centavos: 2000000, caracteristicas: 'Fútbol 5, hasta 10 jugadores' },
+      { nombre: 'Alquiler 1 hora y media', duracion_min: 90, precio_centavos: 2800000, caracteristicas: 'Incluye pelota' },
+    ],
+    plazas: [
+      { nombre: 'Cancha 1', tipo: 'Cancha', capacidad: 10, forma: 'rectangulo', ancho: 24, alto: 14, color: '#16a34a' },
+      { nombre: 'Cancha 2', tipo: 'Cancha', capacidad: 10, forma: 'rectangulo', ancho: 24, alto: 14, color: '#15803d' },
+    ],
+    dias: [0, 1, 2, 3, 4, 5, 6], apertura: '10:00', cierre: '23:00',
+  },
   otro: { servicios: [], plazas: [], dias: [], apertura: '09:00', cierre: '18:00' },
 };
+
+const sinTildes = (texto) => texto.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+export function plantillaPara(rubro) {
+  const clave = Object.keys(PLANTILLAS).find((candidata) => candidata !== 'otro' && sinTildes(rubro).includes(sinTildes(candidata)));
+  return PLANTILLAS[clave ?? 'otro'];
+}

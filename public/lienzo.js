@@ -10,6 +10,11 @@ export const LEYENDA = [
   ['Demorado', '#dc2626'], ['No se presentó', '#6b7280'], ['En atención', '#4f46e5'],
 ];
 
+function colorDeTexto(fondo) {
+  const [rojo, verde, azul] = [1, 3, 5].map((inicio) => parseInt(fondo.slice(inicio, inicio + 2), 16));
+  return (rojo * 299 + verde * 587 + azul * 114) / 1000 > 150 ? '#1b1f2a' : '#fff';
+}
+
 function limitar(valor, minimo, maximo) {
   return Math.min(maximo, Math.max(minimo, valor));
 }
@@ -68,10 +73,12 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
   }
 
   function dibujarPlaza(plaza) {
+    const personalizada = Boolean(plaza.color) && plaza.estado !== 'inactiva';
     const circulo = h('div', {
-      class: `plaza ${plaza.estado} ${estado.seleccionada === plaza.id ? 'seleccionada' : ''}`,
-      style: `left:${plaza.x}%;top:${plaza.y}%`, title: plaza.nombre,
-    }, h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`));
+      class: `plaza ${plaza.estado} ${personalizada ? 'personalizada' : ''} ${estado.seleccionada === plaza.id ? 'seleccionada' : ''}`,
+      style: estiloPlaza(plaza, personalizada), title: plaza.nombre,
+    }, h('span', {}, plaza.nombre), h('small', {}, `👥 ${plaza.capacidad}`),
+    estado.editando && estado.seleccionada === plaza.id ? crearAsaTamano(plaza, circulo) : null);
     circulo.addEventListener('pointerdown', (evento) => {
       const elegir = () => { estado.seleccionada = plaza.id; dibujar(); alElegirPlaza(plaza); };
       if (!estado.editando) { elegir(); return; }
@@ -92,6 +99,42 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
       });
     });
     mapa.append(circulo);
+  }
+
+  function estiloPlaza(plaza, personalizada) {
+    const color = personalizada ? `background:${plaza.color};color:${colorDeTexto(plaza.color)};` : '';
+    const radio = plaza.forma === 'rectangulo' ? 'border-radius:10px;' : 'border-radius:50%;';
+    return `left:${plaza.x}%;top:${plaza.y}%;width:${plaza.ancho}cqw;height:${plaza.alto}cqw;${radio}${color}`;
+  }
+
+  function crearAsaTamano(plaza, circulo) {
+    const asa = h('div', { class: 'asa', title: 'Arrastrá para cambiar el tamaño' });
+    asa.addEventListener('pointerdown', (evento) => {
+      evento.stopPropagation();
+      estado.ocupado = true;
+      arrastrar(evento, asa, {
+        alMover: (movimiento) => {
+          const caja = mapa.getBoundingClientRect();
+          const centroX = caja.left + (plaza.x / 100) * caja.width;
+          const centroY = caja.top + (plaza.y / 100) * caja.height;
+          plaza.ancho = Number(limitar((2 * Math.abs(movimiento.clientX - centroX) / caja.width) * 100, 3, 70).toFixed(1));
+          plaza.alto = Number(limitar((2 * Math.abs(movimiento.clientY - centroY) / caja.width) * 100, 3, 70).toFixed(1));
+          circulo.style.width = `${plaza.ancho}cqw`;
+          circulo.style.height = `${plaza.alto}cqw`;
+        },
+        alSoltar: async () => {
+          estado.ocupado = false;
+          await guardarPlaza(plaza);
+          alElegirPlaza(plaza);
+        },
+        alTocar: () => { estado.ocupado = false; },
+      });
+    });
+    return asa;
+  }
+
+  async function guardarPlaza({ id, nombre, tipo, descripcion, forma, ancho, alto, color, capacidad, activo }) {
+    try { await api(`/api/plazas/${id}`, { metodo: 'PUT', cuerpo: { nombre, tipo, descripcion, forma, ancho, alto, color, capacidad, activo } }); } catch (error) { mostrarError(mensaje, error); }
   }
 
   function dibujarGuia(guia) {
