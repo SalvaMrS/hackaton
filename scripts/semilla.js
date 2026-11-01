@@ -63,8 +63,8 @@ const COMERCIOS = [
       plaza('Terraza 1', 'Terraza', 4, 'circulo', 80, 12, 9, 9, '#38bdf8', 'Junto a la baranda.'),
       plaza('Terraza 2', 'Terraza', 4, 'circulo', 80, 28, 9, 9, '#38bdf8'),
       plaza('Terraza 3', 'Terraza', 4, 'circulo', 80, 44, 9, 9, '#38bdf8'),
-      plaza('Terraza 4', 'Terraza', 2, 'circulo', 92, 20, 7, 7, '#7dd3fc'),
-      plaza('Terraza 5', 'Terraza', 2, 'circulo', 92, 36, 7, 7, '#7dd3fc'),
+      plaza('Terraza 4', 'Terraza', 2, 'circulo', 92, 20, 8.5, 8.5, '#7dd3fc'),
+      plaza('Terraza 5', 'Terraza', 2, 'circulo', 92, 36, 8.5, 8.5, '#7dd3fc'),
     ],
     guias: [...perimetro(), linea(69, 3, 69, 40), linea(69, 60, 69, 97)],
   },
@@ -84,7 +84,7 @@ const COMERCIOS = [
       plaza('Lavado 2', 'Lavado', 1, 'circulo', 34, 33, 8, 6, '#0ea5e9'),
       plaza('Cabina de color', 'Cabina', 1, 'rectangulo', 72, 34, 20, 10, '#a855f7', 'Reservado, con extractor.'),
     ],
-    guias: [...perimetro(), linea(4, 22, 56, 22), linea(88, 3, 88, 60)],
+    guias: [...perimetro(), linea(4, 42, 56, 42), linea(88, 3, 88, 60)],
   },
   {
     slug: 'consultorio-dra-lopez', nombre: 'Consultorio Dra. López', rubro: 'consultorio', direccion: 'Mitre 780, Rosario', telefono: '341 555 0303',
@@ -102,7 +102,7 @@ const COMERCIOS = [
       plaza('Sala de estudios', 'Estudios', 1, 'rectangulo', 22, 42, 30, 12, '#34d399', 'Equipo de ECG y ecografía.'),
       plaza('Sala de procedimientos', 'Estudios', 1, 'rectangulo', 62, 42, 22, 12, '#6ee7b7'),
     ],
-    guias: [...perimetro(), linea(3, 27, 97, 27), linea(3, 31, 97, 31)],
+    guias: [...perimetro(), linea(3, 46, 97, 46), linea(3, 54, 97, 54)],
   },
   {
     slug: 'pilates-armonia', nombre: 'Estudio Pilates Armonía', rubro: 'pilates y yoga', direccion: 'Pellegrini 1220, Rosario', telefono: '341 555 0505',
