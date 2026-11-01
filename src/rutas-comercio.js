@@ -1,6 +1,6 @@
 import { errorHttp, exigirUsuario, exigirComercio } from './auth.js';
 import {
-  textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional, hora, slugDesde,
+  textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional, hora, slugDesde, imagenOpcional,
 } from './validacion.js';
 
 function leerComercio(body) {
@@ -12,6 +12,7 @@ function leerComercio(body) {
     telefono: textoOpcional(body.telefono, 'telefono', 40),
     lat: coordenadaOpcional(body.lat, 'lat', 90),
     lng: coordenadaOpcional(body.lng, 'lng', 180),
+    imagen_url: imagenOpcional(body.imagen_url, 'imagen_url'),
     ...leerUmbrales(body),
   };
 }
@@ -29,11 +30,20 @@ function leerUmbrales(body) {
 }
 
 function leerServicio(body) {
+  const precio = enteroEnRango(body.precio_centavos ?? 0, 'precio_centavos', 0, 100_000_000);
+  const oferta = body.oferta === true || body.oferta === 1 ? 1 : 0;
+  const precioOferta = enteroEnRango(body.precio_oferta_centavos ?? 0, 'precio_oferta_centavos', 0, 100_000_000);
+  if (oferta && (precioOferta <= 0 || precioOferta >= precio)) {
+    throw errorHttp(400, 'campo_invalido', 'El precio de oferta debe ser mayor a 0 y menor al precio normal');
+  }
   return {
+    imagen_url: imagenOpcional(body.imagen_url, 'imagen_url'),
+    oferta,
+    precio_oferta_centavos: oferta ? precioOferta : 0,
     nombre: textoRequerido(body.nombre, 'nombre', 80),
     descripcion: textoOpcional(body.descripcion, 'descripcion'),
     caracteristicas: textoOpcional(body.caracteristicas, 'caracteristicas'),
-    precio_centavos: enteroEnRango(body.precio_centavos ?? 0, 'precio_centavos', 0, 100_000_000),
+    precio_centavos: precio,
     duracion_min: enteroEnRango(body.duracion_min, 'duracion_min', 5, 600),
     activo: body.activo === false || body.activo === 0 ? 0 : 1,
   };
@@ -125,8 +135,8 @@ export function rutasComercio(app) {
     const datos = leerComercio(req.body ?? {});
     const slug = slugLibre(db, datos.nombre);
     const { lastInsertRowid } = db
-      .prepare('INSERT INTO comercios (slug, nombre, rubro, descripcion, direccion, telefono, lat, lng, aviso_min, tolerancia_min, ausente_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(slug, datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.aviso_min, datos.tolerancia_min, datos.ausente_min);
+      .prepare('INSERT INTO comercios (slug, nombre, rubro, descripcion, direccion, telefono, lat, lng, imagen_url, aviso_min, tolerancia_min, ausente_min) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(slug, datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.imagen_url, datos.aviso_min, datos.tolerancia_min, datos.ausente_min);
     db.prepare('UPDATE usuarios SET comercio_id = ? WHERE id = ?').run(lastInsertRowid, req.usuario.id);
     return reply.status(201).send({ id: Number(lastInsertRowid), slug, ...datos });
   });
@@ -136,14 +146,14 @@ export function rutasComercio(app) {
 
   app.put('/api/comercio', { preHandler: exigirComercio(app) }, async (req) => {
     const datos = leerComercio(req.body ?? {});
-    db.prepare('UPDATE comercios SET nombre = ?, rubro = ?, descripcion = ?, direccion = ?, telefono = ?, lat = ?, lng = ?, aviso_min = ?, tolerancia_min = ?, ausente_min = ? WHERE id = ?')
-      .run(datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.aviso_min, datos.tolerancia_min, datos.ausente_min, req.usuario.comercio_id);
+    db.prepare('UPDATE comercios SET nombre = ?, rubro = ?, descripcion = ?, direccion = ?, telefono = ?, lat = ?, lng = ?, imagen_url = ?, aviso_min = ?, tolerancia_min = ?, ausente_min = ? WHERE id = ?')
+      .run(datos.nombre, datos.rubro, datos.descripcion, datos.direccion, datos.telefono, datos.lat, datos.lng, datos.imagen_url, datos.aviso_min, datos.tolerancia_min, datos.ausente_min, req.usuario.comercio_id);
     return db.prepare('SELECT * FROM comercios WHERE id = ?').get(req.usuario.comercio_id);
   });
 
   registrarCrud(app, {
     ruta: '/api/servicios', tabla: 'servicios', orden: 'nombre', leer: leerServicio,
-    columnas: ['nombre', 'descripcion', 'caracteristicas', 'precio_centavos', 'duracion_min', 'activo'],
+    columnas: ['nombre', 'descripcion', 'caracteristicas', 'precio_centavos', 'duracion_min', 'activo', 'imagen_url', 'oferta', 'precio_oferta_centavos'],
   });
   registrarCrud(app, {
     ruta: '/api/plazas', tabla: 'plazas', orden: 'nombre', leer: leerPlaza,

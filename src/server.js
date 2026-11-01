@@ -4,16 +4,19 @@ import { fileURLToPath } from 'node:url';
 import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
 import { randomBytes } from 'node:crypto';
+import { mkdirSync } from 'node:fs';
 import { abrirBaseDeDatos } from './db.js';
 import { rutasAuth } from './rutas-auth.js';
 import { rutasComercio } from './rutas-comercio.js';
 import { rutasPublicas } from './rutas-publicas.js';
 import { rutasSalon } from './salon.js';
+import { rutasImagenes, DIRECTORIO_SUBIDAS } from './imagenes.js';
 
 const publico = fileURLToPath(new URL('../public', import.meta.url));
 
 export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
-  const app = Fastify({ logger: { redact: ['req.headers.cookie', 'req.headers.authorization'] } });
+  mkdirSync(DIRECTORIO_SUBIDAS, { recursive: true });
+  const app = Fastify({ bodyLimit: 4 * 1024 * 1024, logger: { redact: ['req.headers.cookie', 'req.headers.authorization'] } });
   app.decorate('db', db);
   app.register(fastifyCookie, { secret: process.env.SESSION_SECRET ?? randomBytes(32).toString('hex') });
   app.register(fastifyRateLimit, { max: 300, timeWindow: '1 minute' });
@@ -21,6 +24,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   app.register(async (instancia) => rutasComercio(instancia));
   app.register(async (instancia) => rutasPublicas(instancia));
   app.register(async (instancia) => rutasSalon(instancia));
+  app.register(async (instancia) => rutasImagenes(instancia));
 
   app.get('/api/salud', async () => ({ ok: true }));
 
@@ -33,6 +37,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   });
 
   app.register(fastifyStatic, { root: publico });
+  app.register(fastifyStatic, { root: DIRECTORIO_SUBIDAS, prefix: '/uploads/', decorateReply: false, maxAge: '7d' });
   return app;
 }
 

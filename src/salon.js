@@ -31,8 +31,8 @@ function turnosVigentes(db, comercioId, ahora) {
   ).all(comercioId, ahora, ahora.slice(0, 10));
 }
 
-export function estadoDelSalon(db, comercio, ahora = ahoraLocal()) {
-  const plazas = db.prepare('SELECT id, nombre, tipo, descripcion, capacidad, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND activo = 1 ORDER BY id').all(comercio.id);
+export function estadoDelSalon(db, comercio, ahora = ahoraLocal(), { incluirInactivas = false } = {}) {
+  const plazas = db.prepare('SELECT id, nombre, tipo, descripcion, capacidad, activo, pos_x, pos_y FROM plazas WHERE comercio_id = ? AND (activo = 1 OR ?) ORDER BY id').all(comercio.id, incluirInactivas ? 1 : 0);
   const todosLosTurnos = turnosVigentes(db, comercio.id, ahora)
     .map((turno) => ({ ...turno, ...situacionDelTurno(turno, comercio, ahora) }));
   const turnos = todosLosTurnos.filter((turno) => turno.situacion !== 'proximo' || turno.minutos <= comercio.aviso_min);
@@ -44,7 +44,7 @@ export function estadoDelSalon(db, comercio, ahora = ahoraLocal()) {
       ...plaza,
       x: plaza.pos_x ?? porDefecto.x,
       y: plaza.pos_y ?? porDefecto.y,
-      estado: turno ? turno.situacion : 'libre',
+      estado: plaza.activo ? (turno ? turno.situacion : 'libre') : 'inactiva',
       turno,
       proximos: todosLosTurnos.filter((candidato) => candidato.plaza_id === plaza.id),
     };
@@ -64,7 +64,8 @@ export function rutasSalon(app) {
   const antes = { preHandler: exigirComercio(app) };
   const comercioDe = (req) => db.prepare('SELECT * FROM comercios WHERE id = ?').get(req.usuario.comercio_id);
 
-  app.get('/api/salon', antes, async (req) => estadoDelSalon(db, comercioDe(req)));
+  app.get('/api/salon', antes, async (req) =>
+    estadoDelSalon(db, comercioDe(req), undefined, { incluirInactivas: req.query.todas === '1' }));
 
   app.get('/api/recepcion', antes, async (req) => buscarEnRecepcion(db, comercioDe(req), String(req.query.q ?? '')));
 

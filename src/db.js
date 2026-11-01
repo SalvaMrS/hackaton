@@ -69,6 +69,10 @@ CREATE INDEX IF NOT EXISTS idx_turnos_comercio_inicio ON turnos(comercio_id, ini
 `;
 
 const COLUMNAS_NUEVAS = [
+  ['comercios', 'imagen_url', "TEXT NOT NULL DEFAULT ''"],
+  ['servicios', 'imagen_url', "TEXT NOT NULL DEFAULT ''"],
+  ['servicios', 'oferta', 'INTEGER NOT NULL DEFAULT 0'],
+  ['servicios', 'precio_oferta_centavos', 'INTEGER NOT NULL DEFAULT 0'],
   ['plazas', 'pos_x', 'REAL'],
   ['plazas', 'pos_y', 'REAL'],
   ['plazas', 'descripcion', "TEXT NOT NULL DEFAULT ''"],

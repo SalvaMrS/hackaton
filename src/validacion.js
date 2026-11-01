@@ -43,3 +43,13 @@ export function slugDesde(nombre) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '');
 }
+
+const URL_IMAGEN = /^(\/uploads\/[\w.-]+|https?:\/\/\S+)$/;
+
+export function imagenOpcional(valor, campo) {
+  if (valor == null || valor === '') return '';
+  if (typeof valor !== 'string' || valor.length > 500 || !URL_IMAGEN.test(valor)) {
+    throw errorHttp(400, 'campo_invalido', `${campo} debe ser una imagen subida o una URL http(s)`);
+  }
+  return valor;
+}

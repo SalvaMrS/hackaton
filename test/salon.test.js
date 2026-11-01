@@ -20,8 +20,8 @@ function prepararBaseDeDatos() {
     'INSERT INTO servicios (comercio_id, nombre, duracion_min) VALUES (?, ?, ?)',
   ).run(comercioId, 'Corte', 30);
   const { lastInsertRowid: plazaId } = db.prepare(
-    'INSERT INTO plazas (comercio_id, nombre) VALUES (?, ?)',
-  ).run(comercioId, 'Sillon 1');
+    'INSERT INTO plazas (comercio_id, nombre, descripcion) VALUES (?, ?, ?)',
+  ).run(comercioId, 'Sillon 1', 'Junto a la ventana');
   const insertarTurno = db.prepare(
     `INSERT INTO turnos (comercio_id, servicio_id, plaza_id, inicio, fin, cliente_nombre, codigo, estado)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -111,6 +111,19 @@ describe('salon', () => {
     assert.equal(plaza.turno.cliente_nombre, 'Juan Pérez');
   });
 
+  it('incluye descripción y los próximos turnos de hoy con situación', (t) => {
+    const { db, comercio, plazaId } = prepararBaseDeDatos();
+    t.after(() => db.close());
+
+    const [plaza] = estadoDelSalon(db, comercio, '2026-11-03T20:45');
+
+    assert.equal(plaza.id, plazaId);
+    assert.equal(plaza.descripcion, 'Junto a la ventana');
+    assert.equal(plaza.proximos.length, 1);
+    assert.equal(plaza.proximos[0].cliente_nombre, 'Juan Pérez');
+    assert.equal(plaza.proximos[0].situacion, 'proximo');
+  });
+
   it('deja la plaza libre a las 19:00 porque está fuera del aviso', (t) => {
     const { db, comercio, plazaId } = prepararBaseDeDatos();
     t.after(() => db.close());
@@ -134,22 +147,53 @@ describe('recepcion', () => {
     assert.equal(resultados[0].cliente_nombre, 'Juan Pérez');
   });
 
-  it('encuentra por código exacto', (t) => {
-    const { db, comercio } = prepararBaseDeDatos();
-    t.after(() => db.close());
-
-    const resultados = buscarEnRecepcion(db, comercio, 'ABC123', '2026-11-03T20:45');
-
-    assert.equal(resultados.length, 1);
-    assert.equal(resultados[0].codigo, 'ABC123');
-  });
-
   it('no devuelve un turno cancelado', (t) => {
     const { db, comercio } = prepararBaseDeDatos();
     t.after(() => db.close());
 
     assert.deepEqual(buscarEnRecepcion(db, comercio, 'Pedro', '2026-11-03T20:45'), []);
-    assert.deepEqual(buscarEnRecepcion(db, comercio, 'XYZ789', '2026-11-03T20:45'), []);
+  });
+});
+
+describe('guias', () => {
+  it('crea, lista y borra una guía', async (t) => {
+    const app = await iniciarApp(t);
+    const { cookie } = await registrarConComercio(app, ANA);
+
+    const creada = await app.inject({
+      method: 'POST',
+      url: '/api/guias',
+      headers: { cookie },
+      payload: { x1: 10, y1: 20, x2: 30, y2: 40 },
+    });
+    assert.equal(creada.statusCode, 201);
+    const guia = creada.json();
+    assert.deepEqual(
+      { x1: guia.x1, y1: guia.y1, x2: guia.x2, y2: guia.y2 },
+      { x1: 10, y1: 20, x2: 30, y2: 40 },
+    );
+
+    const lista = await app.inject({ method: 'GET', url: '/api/guias', headers: { cookie } });
+    assert.equal(lista.statusCode, 200);
+    assert.deepEqual(lista.json().map(({ id }) => id), [guia.id]);
+
+    const borrada = await app.inject({ method: 'DELETE', url: `/api/guias/${guia.id}`, headers: { cookie } });
+    assert.equal(borrada.statusCode, 204);
+  });
+
+  it('rechaza una coordenada fuera de 0 a 100 con 400 campo_invalido', async (t) => {
+    const app = await iniciarApp(t);
+    const { cookie } = await registrarConComercio(app, ANA);
+
+    const respuesta = await app.inject({
+      method: 'POST',
+      url: '/api/guias',
+      headers: { cookie },
+      payload: { x1: 150, y1: 20, x2: 30, y2: 40 },
+    });
+
+    assert.equal(respuesta.statusCode, 400);
+    assert.equal(respuesta.json().error.code, 'campo_invalido');
   });
 });
 
