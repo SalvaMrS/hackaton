@@ -1,4 +1,4 @@
-import { h, api, leerUbicacionGuardada, formularioDireccion, pedirUbicacionDelNavegador } from "./dom.js";
+import { h, api, leerUbicacionGuardada, formularioDireccion } from "./dom.js";
 
 const MENSAJE_INICIAL = "Hola! Soy el asistente de turnos. Puedo buscar comercios cerca tuyo, mostrarte precios y horarios libres, y reservar por vos.";
 const RESPUESTAS_RAPIDAS = [
@@ -124,10 +124,6 @@ function crearIconoEnviar() {
 
 const estado = document.getElementById("estado");
 
-function pedirUbicacion() {
-  pedirUbicacionDelNavegador({ alObtener: () => actualizarEstado(), alFallar: () => mostrarDireccion() });
-}
-
 function mostrarDireccion() {
   estado.replaceChildren(
     h("span", {}, "Escribí tu dirección o barrio:"),
@@ -143,9 +139,7 @@ async function actualizarEstado() {
     usuario
       ? h("span", { class: "ok" }, `✔ Sesión: ${usuario.nombre || usuario.email}`)
       : h("button", { type: "button", onclick: () => window.open("/?ingresar=1", "_blank") }, "Ingresar para reservar"),
-    conUbicacion
-      ? h("span", { class: "ok" }, "📍 Ubicación activada")
-      : h("button", { type: "button", onclick: pedirUbicacion }, "📍 Activar ubicación"),
+    conUbicacion ? h("span", { class: "ok" }, "📍 Ubicación activada") : h("button", { type: "button", disabled: true, title: "Requiere HTTPS (certificado SSL)" }, "📍 Ubicación automática (requiere SSL)"),
     h("button", { type: "button", onclick: mostrarDireccion }, conUbicacion ? "Cambiar dirección" : "✏️ Escribir mi dirección"),
   );
 }
@@ -213,7 +207,6 @@ function iniciar() {
   if (!conversacionRestaurada) mostrarChips();
   else if (ultimo.role === "assistant") mostrarChips(separarOpciones(ultimo.content).opciones);
   actualizarEstado();
-  if (leerUbicacion().lat == null) pedirUbicacion();
   window.addEventListener("focus", actualizarEstado);
   guardarMensajes();
   ajustarAltura();

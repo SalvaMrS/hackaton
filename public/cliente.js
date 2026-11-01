@@ -1,5 +1,5 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario,
-  leerUbicacionGuardada, formularioDireccion, pedirUbicacionDelNavegador } from './dom.js';
+  leerUbicacionGuardada, formularioDireccion, botonUbicacionDeshabilitado } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -146,23 +146,16 @@ async function mostrarBuscador() {
     ubicacionTexto.textContent = aviso;
     zonaDireccion.replaceChildren(formularioDireccion({ alObtener: fijarUbicacion }));
   };
-  const sinGeolocalizacion = () => pedirDireccion('Tu navegador no puede ubicarte en este sitio. Escribí tu dirección o barrio para ver lo más cercano (también podés buscar sin ubicación):');
-  const usarUbicacion = () => {
-    ubicacionTexto.textContent = 'Buscando tu ubicación…';
-    pedirUbicacionDelNavegador({ alObtener: fijarUbicacion, alFallar: sinGeolocalizacion });
-  };
-
   app.replaceChildren(
     h('h1', {}, 'Reservá turnos cerca tuyo'),
     h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
       texto, h('button', { type: 'submit' }, 'Buscar'),
-      h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Cerca de mí'),
       h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección')),
-    chips, ubicacionTexto, zonaDireccion, estado, resultados, sesion.usuario && seccionMisTurnos());
+    botonUbicacionDeshabilitado(), chips, ubicacionTexto, zonaDireccion, estado, resultados, sesion.usuario && seccionMisTurnos());
   cargarRubros();
   buscar();
   if (ubicacion.lat != null) fijarUbicacion(ubicacion);
-  else pedirUbicacionDelNavegador({ alObtener: fijarUbicacion, alFallar: sinGeolocalizacion });
+  else ubicacionTexto.textContent = 'Indicá tu dirección para ver primero lo más cercano. También podés buscar sin ubicación.';
 }
 
 async function mostrarComercio(slug) {

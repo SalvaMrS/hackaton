@@ -48,10 +48,14 @@ async function mostrarAlta() {
     lng: h('input', { type: 'number', step: 'any' }),
   };
   const mensaje = h('p');
-  const usarUbicacion = () => navigator.geolocation.getCurrentPosition(({ coords }) => {
-    campos.lat.value = coords.latitude.toFixed(5);
-    campos.lng.value = coords.longitude.toFixed(5);
-  });
+  const ubicarPorDireccion = async () => {
+    try {
+      const { lat, lng } = await api(`/api/geocodificar?q=${encodeURIComponent(campos.direccion.value)}`);
+      campos.lat.value = lat.toFixed(5);
+      campos.lng.value = lng.toFixed(5);
+      mensaje.textContent = '';
+    } catch (error) { mostrarError(mensaje, error); }
+  };
 
   async function crear(evento) {
     evento.preventDefault();
@@ -71,7 +75,7 @@ async function mostrarAlta() {
       h('label', {}, 'Nombre', campos.nombre), h('label', {}, 'Rubro (escribilo o elegí uno existente)', rubro, opcionesRubro),
       h('label', {}, 'Dirección', campos.direccion), h('label', {}, 'Teléfono', campos.telefono),
       h('div', { class: 'fila' }, h('label', {}, 'Latitud', campos.lat), h('label', {}, 'Longitud', campos.lng),
-        h('button', { type: 'button', class: 'secundario', onclick: usarUbicacion }, '📍 Usar mi ubicación')),
+        h('button', { type: 'button', class: 'secundario', onclick: ubicarPorDireccion }, '📍 Ubicar por la dirección')),
       h('button', { type: 'submit' }, 'Crear comercio')), mensaje));
 }
 

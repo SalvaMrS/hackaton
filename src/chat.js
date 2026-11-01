@@ -78,7 +78,7 @@ function fechaConDia(ahora) {
 function instrucciones(contexto) {
   const ubicacion = contexto.lat != null
     ? 'Conocés la ubicación del cliente: buscar_comercios y buscar_turnos_cercanos ya ordenan por cercanía y devuelven distancia_km.'
-    : 'No conocés la ubicación del cliente: avisale una vez que puede tocar "Activar ubicación" o "Escribir mi dirección" arriba del chat para ver lo más cercano, y mientras tanto seguí sin ella.';
+    : 'No conocés la ubicación del cliente: avisale una vez que puede tocar "Escribir mi dirección" arriba del chat para ver lo más cercano (la ubicación automática no está disponible), y mientras tanto seguí sin ella.';
   const sesion = contexto.usuarioId
     ? `El cliente tiene la sesión iniciada como ${contexto.usuarioNombre}.`
     : 'El cliente NO inició sesión: puede consultar todo, pero para reservar o cancelar tiene que tocar "Ingresar" arriba del chat. Pedíselo recién cuando vaya a reservar.';

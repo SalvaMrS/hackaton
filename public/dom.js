@@ -163,9 +163,8 @@ export function formularioDireccion({ alObtener }) {
   } }, direccion, h('button', { type: 'submit' }, 'Usar esta dirección'), mensaje);
 }
 
-export function pedirUbicacionDelNavegador({ alObtener, alFallar }) {
-  if (!navigator.geolocation || !window.isSecureContext) { alFallar(); return; }
-  navigator.geolocation.getCurrentPosition(
-    ({ coords }) => { const ubicacion = { lat: coords.latitude, lng: coords.longitude }; guardarUbicacion(ubicacion); alObtener(ubicacion); },
-    alFallar, { timeout: 8000 });
+export function botonUbicacionDeshabilitado() {
+  return h('div', { class: 'google-pendiente' },
+    h('button', { type: 'button', class: 'secundario', disabled: true }, '📍 Cerca de mí (automático)'),
+    h('span', { class: 'suave' }, 'Próximamente: la ubicación automática quedaría disponible con certificado SSL (HTTPS); el navegador la bloquea sin él. Mientras tanto, escribí tu dirección.'));
 }
