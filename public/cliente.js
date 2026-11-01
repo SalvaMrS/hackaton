@@ -1,5 +1,5 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario,
-  leerUbicacionGuardada, formularioDireccion, iconoRubro, cuentasDePrueba } from './dom.js';
+  leerUbicacionGuardada, formularioDireccion, iconoRubro, cuentasDePrueba, esMovil } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -127,6 +127,11 @@ function bandaParaComercios() {
     h('a', { class: 'boton', href: '/panel.html' }, 'Anunciá tu comercio'));
 }
 
+function tarjetaEsqueleto() {
+  return h('div', { class: 'tarjeta tarjeta-comercio esqueleto', 'aria-hidden': 'true' },
+    h('div', { class: 'tarjeta-portada' }), h('div', { class: 'linea-esqueleto ancha' }), h('div', { class: 'linea-esqueleto' }), h('div', { class: 'linea-esqueleto corta' }));
+}
+
 function tarjetaTurno(turno, alCambiar) {
   const mapa = turno.lat != null ? `https://www.openstreetmap.org/?mlat=${turno.lat}&mlon=${turno.lng}#map=17/${turno.lat}/${turno.lng}` : null;
   return h('div', { class: 'tarjeta' },
@@ -159,7 +164,7 @@ function seccionMisTurnos() {
 
 async function mostrarBuscador() {
   slugActual = null;
-  const resultados = h('div', { class: 'grilla' });
+  const resultados = h('div', { class: 'grilla', 'aria-busy': 'true' }, ...Array.from({ length: 6 }, tarjetaEsqueleto));
   const texto = h('input', { type: 'search', placeholder: 'Buscá un servicio, rubro o comercio…' });
   const estado = h('p', { class: 'suave' });
   const chips = h('div', { class: 'chips-rubro', hidden: true });
@@ -195,8 +200,11 @@ async function mostrarBuscador() {
     if (ubicacion.lat != null) { consulta.set('lat', ubicacion.lat); consulta.set('lng', ubicacion.lng); }
     try {
       const comercios = await api(`/api/comercios?${consulta}`);
-      resultados.replaceChildren(...comercios.map(tarjetaComercio));
-      estado.textContent = comercios.length ? '' : 'No encontramos resultados.';
+      resultados.setAttribute('aria-busy', 'false');
+      resultados.replaceChildren(...(comercios.length ? comercios.map(tarjetaComercio) : [h('div', { class: 'vacio' },
+        h('strong', {}, 'No encontramos comercios'), h('p', { class: 'suave' }, 'Probá con otra palabra o quitá el filtro de tipo.'),
+        h('button', { type: 'button', onclick: () => { texto.value = ''; elegirRubro(''); } }, 'Ver todos los comercios'))]));
+      estado.textContent = '';
     } catch (error) { mostrarError(estado, error); }
   }
 
@@ -276,6 +284,7 @@ async function mostrarComercio(slug) {
           evento.currentTarget.classList.add('elegida');
           reserva.inicio = franja.inicio;
           confirmar.disabled = false;
+          if (esMovil()) nombre.scrollIntoView({ behavior: 'smooth', block: 'center' });
         },
       }, franja.inicio.slice(11));
       franjas.replaceChildren(...(lista.length

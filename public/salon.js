@@ -1,4 +1,4 @@
-import { h, api, mostrarError, campoImagen, grupoBotones, campoFormulario, esMovil, etiquetarTablas } from './dom.js';
+import { h, api, mostrarError, campoImagen, grupoBotones, campoFormulario, esMovil, etiquetarTablas, avisar } from './dom.js';
 import { crearLienzo, LEYENDA } from './lienzo.js';
 
 export function textoSituacion({ situacion, minutos }) {
@@ -19,6 +19,7 @@ export async function cambiarEstadoTurno(turnoId, estado) {
 export function accionesDeTurno(turno, alCambiar) {
   const boton = (texto, estado, clase = 'secundario') => h('button', { class: clase, onclick: async () => {
     await cambiarEstadoTurno(turno.id, estado);
+    avisar(`Turno marcado como ${estado.replace('_', ' ')}`);
     alCambiar();
   } }, texto);
   return h('div', { class: 'fila' },
@@ -73,6 +74,7 @@ export function seccionConfiguracion() {
       await api('/api/comercio', { metodo: 'PUT', cuerpo });
       mensaje.className = 'mensaje-ok';
       mensaje.textContent = 'Cambios guardados.';
+      avisar('Configuración guardada');
     } catch (error) { mostrarError(mensaje, error); }
   }
 
@@ -117,6 +119,16 @@ function pintarLista(lista, plazas, seleccionada, alTocar) {
     h('small', { class: `situacion-${plaza.estado}` }, textoEstadoPlaza(plaza))))));
 }
 
+const ETIQUETAS_RESUMEN = [['libre', 'libres', '#10b981'], ['proximo', 'con reserva próxima', '#eab308'], ['en_hora', 'en hora de llegada', '#f97316'],
+  ['demorado', 'demoradas', '#dc2626'], ['ausente', 'sin presentarse', '#6b7280'], ['en_curso', 'en atención', '#4f46e5']];
+
+function pintarResumen(resumen, plazas) {
+  const activas = plazas.filter((plaza) => plaza.estado !== 'inactiva');
+  resumen.replaceChildren(h('strong', {}, `${activas.length} plazas`),
+    ...ETIQUETAS_RESUMEN.map(([estado, texto, color]) => [estado, texto, color, activas.filter((plaza) => plaza.estado === estado).length])
+      .filter(([, , , cantidad]) => cantidad).map(([, texto, color, cantidad]) => h('span', { class: 'resumen-dato', style: `--color:${color}` }, h('b', {}, String(cantidad)), ` ${texto}`)));
+}
+
 function selectorDeVista(contenedor) {
   const aplicar = (vista) => { contenedor.classList.toggle('vista-lista', vista === 'lista'); contenedor.classList.toggle('vista-mapa', vista === 'mapa'); };
   aplicar(esMovil() ? 'lista' : 'mapa');
@@ -136,12 +148,13 @@ const pistaPlaza = () => h('div', { class: 'tarjeta suave' }, 'Tocá una plaza p
 export function seccionSalon() {
   const lateral = h('div', {}, pistaPlaza());
   const lista = h('div', { class: 'lista-plazas' });
+  const resumen = h('div', { class: 'resumen-salon' });
   const contenedor = h('div', {});
   const lienzo = crearLienzo({
     alElegirPlaza: (plaza) => { lateral.replaceChildren(panelPlaza(plaza)); llevarA(lateral); },
-    alActualizar: (plazas, seleccionada) => pintarLista(lista, plazas, seleccionada, (id) => lienzo.seleccionar(id)),
+    alActualizar: (plazas, seleccionada) => { pintarResumen(resumen, plazas); pintarLista(lista, plazas, seleccionada, (id) => lienzo.seleccionar(id)); },
   });
-  contenedor.append(h('h2', { style: 'margin-top:0' }, 'Salón en vivo'), selectorDeVista(contenedor), leyenda(), lienzo.mensaje,
+  contenedor.append(h('h2', { style: 'margin-top:0' }, 'Salón en vivo'), resumen, selectorDeVista(contenedor), leyenda(), lienzo.mensaje,
     h('div', { class: 'dos-columnas' }, h('div', {}, lienzo.mapa, lista), lateral));
   return contenedor;
 }
@@ -230,6 +243,7 @@ export function seccionPlazas() {
         nombre: `Plaza ${lienzo.cantidad() + 1}`, tipo: '', descripcion: '', capacidad: 2, forma: 'circulo', ancho: 9, alto: 9, color: '', activo: 1,
       });
       mensaje.textContent = '';
+      avisar('Plaza creada: editá sus datos a la derecha');
       lienzo.seleccionar(id);
     } catch (error) { mostrarError(mensaje, error); }
   }
@@ -245,6 +259,7 @@ export function seccionPlazas() {
     try {
       if (plazaEnFormulario) await api(`/api/plazas/${plazaEnFormulario.id}`, { metodo: 'PUT', cuerpo });
       else await crearEnEspacioLibre(cuerpo);
+      avisar('Plaza guardada');
       mensaje.textContent = '';
       cargarFormulario(null);
       await lienzo.recargar();
@@ -254,6 +269,7 @@ export function seccionPlazas() {
   async function quitarPlaza() {
     try {
       await api(`/api/plazas/${plazaEnFormulario.id}`, { metodo: 'DELETE' });
+      avisar('Plaza eliminada');
       mensaje.textContent = '';
       cargarFormulario(null);
       await lienzo.recargar();

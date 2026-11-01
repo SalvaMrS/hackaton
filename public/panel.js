@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba, etiquetarTablas } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba, etiquetarTablas, avisar } from './dom.js';
 import { PLANTILLAS, plantillaPara } from './plantillas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
@@ -120,6 +120,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
     const cuerpo = Object.fromEntries(campos.map((campo) => [campo.nombre, aApi(campo, entradas[campo.nombre].value)]));
     try {
       await api(editandoId ? `${ruta}/${editandoId}` : ruta, { metodo: editandoId ? 'PUT' : 'POST', cuerpo });
+      avisar(editandoId ? 'Cambios guardados' : 'Creado correctamente');
       mensaje.textContent = '';
       limpiar();
       await cargar();
@@ -135,7 +136,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
   }
 
   async function borrar(fila) {
-    try { await api(`${ruta}/${fila.id}`, { metodo: 'DELETE' }); mensaje.textContent = ''; await cargar(); } catch (error) { mostrarError(mensaje, error); }
+    try { await api(`${ruta}/${fila.id}`, { metodo: 'DELETE' }); avisar('Eliminado'); mensaje.textContent = ''; await cargar(); } catch (error) { mostrarError(mensaje, error); }
   }
 
   async function cargar() {
@@ -159,7 +160,7 @@ function seccionAgenda() {
   const mensaje = h('p');
 
   async function cambiarEstado(turno, estado) {
-    try { await api(`/api/turnos/${turno.id}`, { metodo: 'PATCH', cuerpo: { estado } }); cargar(); } catch (error) { mostrarError(mensaje, error); }
+    try { await api(`/api/turnos/${turno.id}`, { metodo: 'PATCH', cuerpo: { estado } }); avisar(`Turno marcado como ${estado.replace('_', ' ')}`); cargar(); } catch (error) { mostrarError(mensaje, error); }
   }
 
   async function cargar() {

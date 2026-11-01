@@ -212,3 +212,11 @@ export function etiquetarTablas(contenedor) {
     tabla.querySelectorAll('tbody tr').forEach((fila) => [...fila.children].forEach((celda, indice) => { celda.dataset.label = titulos[indice] ?? ''; }));
   }
 }
+
+export function avisar(texto, tipo = 'ok') {
+  let zona = document.getElementById('avisos');
+  if (!zona) { zona = h('div', { id: 'avisos', 'aria-live': 'polite' }); document.body.append(zona); }
+  const aviso = h('div', { class: `aviso ${tipo}`, role: 'status' }, texto);
+  zona.append(aviso);
+  setTimeout(() => aviso.remove(), 3200);
+}
