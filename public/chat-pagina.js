@@ -1,6 +1,14 @@
 import { h, api, leerUbicacionGuardada, formularioDireccion } from "./dom.js";
 
-const MENSAJE_INICIAL = "Hola! Soy el asistente de turnos. Puedo buscar comercios cerca tuyo, mostrarte precios y horarios libres, y reservar por vos.";
+const identidad = await api("/api/chat/identidad").catch(() => ({ ahora: "", cliente: null }));
+
+function mensajeInicial() {
+  const [dia, , hora] = identidad.ahora.split(" ");
+  const nombrePila = identidad.cliente?.nombre.split(" ")[0];
+  const saludo = nombrePila ? `¡Hola ${nombrePila}! 👋` : "¡Hola! 👋";
+  const momento = hora ? ` Son las ${hora} del ${dia}.` : "";
+  return `${saludo}${momento} Soy el asistente de turnos: busco lugares cerca tuyo, te muestro precios y horarios libres, y reservo o cancelo por vos.`;
+}
 const RESPUESTAS_RAPIDAS = [
   "Busco un turno cerca mío",
   "Ver mis turnos",
@@ -9,7 +17,7 @@ const RESPUESTAS_RAPIDAS = [
 ];
 const FORMATO_OPCIONES = /\n?\[Opciones:\s*([^\]]+)\]\s*$/i;
 const FORMATO_NEGRITA = /(\*[^*\n]+\*)/;
-const CLAVE_GUARDADO = "chat-mensajes";
+const CLAVE_GUARDADO = "chat-mensajes-v2";
 const ALTURA_MAXIMA_ENTRADA = 98;
 const NS_SVG = "http://www.w3.org/2000/svg";
 
@@ -24,7 +32,7 @@ function leerGuardados() {
 
 const guardados = leerGuardados();
 const conversacionRestaurada = Boolean(guardados?.length);
-const mensajes = conversacionRestaurada ? guardados : [{ role: "assistant", content: MENSAJE_INICIAL }];
+const mensajes = conversacionRestaurada ? guardados : [{ role: "assistant", content: mensajeInicial() }];
 
 let enviando = false;
 let indicadorEscribiendo = null;
@@ -46,6 +54,10 @@ function guardarMensajes() {
 function horaActual() {
   const ahora = new Date();
   return `${String(ahora.getHours()).padStart(2, "0")}:${String(ahora.getMinutes()).padStart(2, "0")}`;
+}
+
+function esVisible(mensaje) {
+  return typeof mensaje.content === "string" && mensaje.role !== "tool";
 }
 
 function separarOpciones(contenido) {
@@ -133,11 +145,11 @@ function mostrarDireccion() {
 }
 
 async function actualizarEstado() {
-  const { usuario } = await api("/api/yo").catch(() => ({ usuario: null }));
+  const { cliente } = await api("/api/chat/identidad").catch(() => ({ cliente: null }));
   const conUbicacion = leerUbicacion().lat != null;
   estado.replaceChildren(
-    usuario
-      ? h("span", { class: "ok" }, `✔ Sesión: ${usuario.nombre || usuario.email}`)
+    cliente
+      ? h("span", { class: "ok" }, `📱 ${cliente.nombre} · ${cliente.telefono || "sin teléfono"}`)
       : h("button", { type: "button", onclick: () => window.open("/?ingresar=1", "_blank") }, "Ingresar para reservar"),
     conUbicacion ? h("span", { class: "ok" }, "📍 Ubicación activada") : h("button", { type: "button", disabled: true, title: "Requiere HTTPS (certificado SSL)" }, "📍 Ubicación automática (requiere SSL)"),
     h("button", { type: "button", onclick: mostrarDireccion }, conUbicacion ? "Cambiar dirección" : "✏️ Escribir mi dirección"),
@@ -177,10 +189,11 @@ async function enviar(texto) {
   mostrarEscribiendo();
 
   try {
-    const { respuesta } = await api("/api/chat", {
+    const { respuesta, historial = [] } = await api("/api/chat", {
       metodo: "POST",
       cuerpo: { mensajes, contexto: obtenerContexto() },
     });
+    mensajes.push(...historial);
     const mensajeAsistente = { role: "assistant", content: respuesta };
     mensajes.push(mensajeAsistente);
     guardarMensajes();
@@ -201,9 +214,10 @@ async function enviar(texto) {
 
 function iniciar() {
   document.title = "Asistente de turnos";
+  document.querySelector(".datos p").textContent = identidad.cliente ? `escribís como ${identidad.cliente.nombre}` : "en línea";
   botonEnviar.append(crearIconoEnviar());
-  for (const mensaje of mensajes) contenedor.append(crearBurbuja(mensaje));
-  const ultimo = mensajes.at(-1);
+  for (const mensaje of mensajes.filter(esVisible)) contenedor.append(crearBurbuja(mensaje));
+  const ultimo = mensajes.filter(esVisible).at(-1);
   if (!conversacionRestaurada) mostrarChips();
   else if (ultimo.role === "assistant") mostrarChips(separarOpciones(ultimo.content).opciones);
   actualizarEstado();

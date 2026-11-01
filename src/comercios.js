@@ -30,11 +30,31 @@ export function detalleComercio(db, slug) {
 
 export const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
-function coincide(comercio, { q, rubro }) {
-  if (rubro && normalizar(comercio.rubro) !== normalizar(rubro)) return false;
-  const palabras = normalizar(q).split(/\s+/).filter(Boolean).map((palabra) => palabra.replace(/s$/, ''));
+const PALABRAS_VACIAS = new Set(['de', 'del', 'el', 'la', 'los', 'las', 'un', 'una', 'para', 'en', 'con', 'y', 'o', 'a', 'mi', 'que', 'quiero', 'necesito', 'busco', 'turno', 'hoy', 'manana']);
+const SINONIMOS = {
+  pelo: 'peluquer barber corte', pelu: 'peluquer barber', cortar: 'corte', barba: 'barber', auto: 'taller lavadero gomeria', coche: 'taller lavadero gomeria',
+  mecanic: 'taller', neumatic: 'gomeria', rueda: 'gomeria', lavar: 'lavadero', comer: 'restaurante', cenar: 'restaurante', almorzar: 'restaurante',
+  perro: 'veterinaria', gato: 'veterinaria', mascota: 'veterinaria', masaje: 'spa', relaj: 'spa', futbol: 'cancha', fulbol: 'cancha', medico: 'consultorio',
+  doctor: 'consultorio', doctora: 'consultorio', salud: 'consultorio', program: 'software', web: 'software', desarroll: 'software', gimnasia: 'pilates yoga', yoga: 'pilates',
+};
+
+function palabrasDeBusqueda(consulta) {
+  return normalizar(consulta).split(/\s+/).filter((palabra) => palabra && !PALABRAS_VACIAS.has(palabra)).map((palabra) => palabra.replace(/s$/, ''));
+}
+
+function puntaje(comercio, consulta) {
+  const palabras = palabrasDeBusqueda(consulta);
+  if (!palabras.length) return 1;
   const texto = normalizar(`${comercio.nombre} ${comercio.rubro} ${comercio.servicios ?? ''}`);
-  return palabras.every((palabra) => texto.includes(palabra));
+  return palabras.reduce((total, palabra) => {
+    const sinonimos = Object.entries(SINONIMOS).filter(([clave]) => palabra.startsWith(clave)).flatMap(([, valores]) => valores.split(' '));
+    const alternativas = [palabra, ...sinonimos];
+    return total + (alternativas.some((alternativa) => texto.includes(alternativa)) ? 1 : 0);
+  }, 0);
+}
+
+function coincide(comercio, { rubro }) {
+  return !rubro || normalizar(comercio.rubro) === normalizar(rubro);
 }
 
 export function listarComercios(db, { q, rubro, lat, lng }) {
@@ -44,11 +64,11 @@ export function listarComercios(db, { q, rubro, lat, lng }) {
   const filas = db.prepare(
     `SELECT c.*, (SELECT group_concat(s.nombre, ', ') FROM servicios s WHERE s.comercio_id = c.id AND s.activo = 1) AS servicios
      FROM comercios c`,
-  ).all().filter((fila) => coincide(fila, { q, rubro }));
+  ).all().filter((fila) => coincide(fila, { rubro })).map((fila) => ({ ...fila, relevancia: puntaje(fila, q) })).filter(({ relevancia }) => relevancia > 0);
 
   const conDistancia = filas.map((fila) => ({
     ...fila,
     distancia_km: origen && fila.lat != null && fila.lng != null ? Number(distanciaKm(origen, fila).toFixed(2)) : null,
   }));
-  return conDistancia.sort((a, b) => (a.distancia_km ?? Infinity) - (b.distancia_km ?? Infinity) || a.nombre.localeCompare(b.nombre));
+  return conDistancia.sort((a, b) => b.relevancia - a.relevancia || (a.distancia_km ?? Infinity) - (b.distancia_km ?? Infinity) || a.nombre.localeCompare(b.nombre));
 }

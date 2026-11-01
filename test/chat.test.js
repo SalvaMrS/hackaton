@@ -91,3 +91,37 @@ describe('asistente', () => {
     assert.match(fallos[0].motivo, /iniciar sesión/);
   });
 });
+
+describe('identidad del chat por teléfono', () => {
+  it('reserva a nombre del cliente identificado sin pedirle nombre ni teléfono', async () => {
+    const db = prepararBase();
+    const argumentos = { slug: 'cancha-test', servicio: 'Alquiler 1 hora', inicio: `${FECHA}T20:00` };
+    await ejecutar(db, 'reservar', argumentos, { usuarioId: 1, usuarioNombre: 'Ana López', usuarioTelefono: '+54 9 341 555 0100' });
+    const turno = db.prepare('SELECT cliente_nombre, cliente_telefono, usuario_id FROM turnos').get();
+    assert.deepEqual({ ...turno }, { cliente_nombre: 'Ana López', cliente_telefono: '+54 9 341 555 0100', usuario_id: 1 });
+  });
+
+  it('el endpoint de identidad devuelve al cliente por defecto y la hora', async (t) => {
+    const { crearServidor } = await import('../src/server.js');
+    const db = prepararBase();
+    db.prepare("UPDATE usuarios SET telefono = '+54 9 341 555 0100' WHERE id = 1").run();
+    const app = crearServidor({ db });
+    t.after(() => app.close());
+    const respuesta = await app.inject({ method: 'GET', url: '/api/chat/identidad' });
+    const { cliente, ahora } = respuesta.json();
+    assert.equal(cliente.nombre, 'Ana');
+    assert.equal(cliente.fuente, 'telefono');
+    assert.match(ahora, /^\w+ \d{4}-\d{2}-\d{2} \d{2}:\d{2}$/);
+  });
+});
+
+describe('búsqueda tolerante', () => {
+  it('encuentra comercios con palabras sueltas y sinónimos', async () => {
+    const { listarComercios } = await import('../src/comercios.js');
+    const db = prepararBase();
+    db.prepare("UPDATE comercios SET nombre = 'Barbería El Corte', rubro = 'peluquería' WHERE id = 1").run();
+    db.prepare("UPDATE servicios SET nombre = 'Corte' WHERE id = 1").run();
+    assert.equal(listarComercios(db, { q: 'quiero un corte de pelo' }).length, 1);
+    assert.equal(listarComercios(db, { q: 'perro' }).length, 0);
+  });
+});

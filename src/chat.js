@@ -6,10 +6,11 @@ const URL_OPENAI = 'https://api.openai.com/v1/chat/completions';
 const TIMEOUT_MS = 25_000;
 const INTENTOS = 3;
 const MAX_VUELTAS = 8;
-const MAX_MENSAJES = 24;
+const MAX_MENSAJES = 40;
 const MAX_FRANJAS_MOSTRADAS = 12;
 const MAX_COMERCIOS_SUGERIDOS = 3;
 const MAX_HORARIOS_POR_SERVICIO = 6;
+const DIAS_A_EXPLORAR = 7;
 const DIAS_SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
 
 const formatoPrecio = new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 });
@@ -87,9 +88,10 @@ function instrucciones(contexto) {
   return [
     'Sos el asistente de turnos de una plataforma de reservas de comercios (canchas, restaurantes, peluquerías, consultorios, estudios). Hablás en español rioplatense, cálido y breve, como en WhatsApp.',
     `Ahora es ${fechaConDia()} (hora de Argentina): ya sabés la fecha y la hora, no se las preguntes. Saludá según la hora (buen día, buenas tardes o buenas noches) la primera vez. Resolvé "hoy", "mañana", "el viernes" con esta fecha. ${ubicacion} ${sesion} ${foco}`,
-    'GUION: guiá al cliente con un ida y vuelta, UNA pregunta por mensaje. Averiguá en este orden lo que falte: 1) qué busca (servicio o rubro) y características que le importen, 2) para qué día y en qué momento u horario, 3) cuántas personas, 4) preferencias (más cerca, oferta). En cuanto sepas servicio y día, llamá a buscar_turnos_cercanos y proponé como máximo 3 opciones con comercio, distancia (si la hay), servicio, precio y 3 o 4 horarios. Después cerrá la elección y confirmá el resumen antes de reservar.',
+    'GUION: guiá al cliente con un ida y vuelta, UNA pregunta por mensaje. Averiguá lo que falte: qué busca (servicio o rubro) y características que le importen, para qué día (si dice "hoy" o "lo antes posible" ya lo sabés: no preguntes la hora, mostrá los horarios), cuántas personas y preferencias (más cerca, oferta). Si el cliente ya dijo qué busca, llamá a buscar_turnos_cercanos EN ESTE MISMO mensaje (si no dijo el día asumí hoy y, si ese día no hay lugar, la herramienta te da el próximo día con lugar); preguntá detalles recién DESPUÉS de mostrar opciones y proponé como máximo 3 opciones con comercio, distancia (si la hay), servicio, precio y 3 o 4 horarios. Después cerrá la elección y confirmá el resumen antes de reservar.',
     'RESERVAS: antes de llamar a reservar mostrá el resumen (comercio, servicio, día y hora, personas, precio y a nombre de quién; por defecto el nombre del cliente identificado) y preguntá "¿Confirmo?". Al reservar informá el lugar asignado (plaza) y la dirección. Si el horario ya no está, ofrecé otros. Para cancelar: listá con mis_turnos, confirmá cuál y recién ahí llamá a cancelar_turno. Para cambiar un turno: reservá el nuevo y después cancelá el viejo, con confirmación.',
     'PRECIOS: son fijos. Informalos exactamente como los devuelven las herramientas (texto con $), sin redondear ni calcular. No hay regateo ni descuentos: si piden rebaja respondé amable que los precios son fijos, y solo mencioná las ofertas publicadas (en_oferta = true). Informá SIEMPRE y en todos los mensajes el mismo precio_a_pagar del servicio elegido; si está en oferta, aclarala una vez con el precio normal tachado (precio_normal_sin_oferta).',
+    'REGLA DE ORO: jamás digas un precio, teléfono, dirección, horario ni disponibilidad que no haya devuelto una herramienta en esta conversación; si no lo tenés, llamá a la herramienta antes de responder. Si no hay lugar ese día, usá proximo_dia_con_lugar y proponelo; no mandes a llamar por teléfono salvo que no haya ninguna opción en los próximos días.',
     'DATOS: usá siempre las herramientas para precios, horarios y disponibilidad; nunca inventes. Identificá el comercio por su slug (o nombre) y el servicio por su nombre exacto; nunca uses ids numéricos de servicio. Si buscar_comercios no devuelve resultados, probá con una palabra más corta o con texto vacío.',
     'FORMATO: mensajes cortos, texto plano con saltos de línea, sin títulos ni listas con guiones largos. Para resaltar usá *un asterisco* a cada lado (nunca doble) solo en una palabra o frase corta, por ejemplo *Fútbol 5 La Terraza*; no uses asteriscos en listas ni en líneas con dos puntos. Podés usar algún emoji. Al final de tu mensaje, cuando convenga ofrecer opciones tocables, agregá UNA última línea con este formato exacto: [Opciones: Hoy | Mañana | Esta semana] (máximo 4 opciones cortas, sin repetir lo que ya está en el texto).',
     'Si no podés resolver algo, decí que puede llamar o escribir al comercio (teléfono en ver_comercio).',
@@ -151,15 +153,32 @@ function serviciosBuscados(comercio, texto) {
   return (coinciden.length ? coinciden : comercio.servicios).slice(0, 2);
 }
 
+function sumarDias(fecha, dias) {
+  return new Date(Date.parse(`${fecha}T00:00:00Z`) + dias * 86_400_000).toISOString().slice(0, 10);
+}
+
+function proximoDiaConLugar(db, comercio, servicio, argumentos) {
+  for (let dias = 1; dias <= DIAS_A_EXPLORAR; dias += 1) {
+    const fecha = sumarDias(argumentos.fecha, dias);
+    const horarios = horariosLibres(db, comercio, servicio, { ...argumentos, fecha });
+    if (horarios.length) return { fecha, dia: DIAS_SEMANA[new Date(`${fecha}T00:00:00Z`).getUTCDay()], horarios: horarios.slice(0, MAX_HORARIOS_POR_SERVICIO) };
+  }
+  return null;
+}
+
 function turnosCercanos(db, argumentos, contexto) {
   const personas = argumentos.personas ?? 1;
   const comercios = listarComercios(db, { q: argumentos.texto, lat: contexto.lat, lng: contexto.lng }).slice(0, MAX_COMERCIOS_SUGERIDOS);
   return comercios.map((comercio) => {
     const detalle = detalleComercio(db, comercio.slug);
-    const opciones = serviciosBuscados(detalle, argumentos.texto).map((servicio) => ({
-      ...servicioParaModelo(servicio),
-      horarios_libres: horariosLibres(db, detalle, servicio, { ...argumentos, personas }).slice(0, MAX_HORARIOS_POR_SERVICIO),
-    }));
+    const opciones = serviciosBuscados(detalle, argumentos.texto).map((servicio) => {
+      const horarios = horariosLibres(db, detalle, servicio, { ...argumentos, personas }).slice(0, MAX_HORARIOS_POR_SERVICIO);
+      return {
+        ...servicioParaModelo(servicio),
+        horarios_libres: horarios,
+        ...(horarios.length ? {} : { sin_lugar_ese_dia: true, proximo_dia_con_lugar: proximoDiaConLugar(db, detalle, servicio, { ...argumentos, personas }) }),
+      };
+    });
     return { slug: comercio.slug, nombre: comercio.nombre, direccion: comercio.direccion, distancia_km: comercio.distancia_km, servicios: opciones };
   });
 }
@@ -256,28 +275,59 @@ export async function llamarOpenAI(cuerpo, { clave = process.env.OPENAI_API_KEY,
   throw errorHttp(503, 'asistente_ocupado', 'El asistente está ocupado, probá de nuevo en unos segundos');
 }
 
+const NOMBRES_HERRAMIENTAS = new Set(HERRAMIENTAS.map(({ function: funcion }) => funcion.name));
+const MAX_LARGO_TEXTO = 1000;
+const MAX_LARGO_HERRAMIENTA = 8000;
+
+function sanearMensaje({ role, content, tool_calls: llamadas, tool_call_id: idLlamada }) {
+  if (role === 'user' && typeof content === 'string') return { role, content: content.slice(0, MAX_LARGO_TEXTO) };
+  if (role === 'assistant' && Array.isArray(llamadas) && llamadas.length) {
+    const validas = llamadas.filter((llamada) => NOMBRES_HERRAMIENTAS.has(llamada?.function?.name) && typeof llamada?.id === 'string');
+    if (validas.length !== llamadas.length) throw errorHttp(400, 'mensajes_invalidos', 'Mensaje inválido');
+    return {
+      role, content: null,
+      tool_calls: validas.map(({ id, function: { name, arguments: argumentos } }) => ({ id: id.slice(0, 64), type: 'function', function: { name, arguments: String(argumentos).slice(0, 2000) } })),
+    };
+  }
+  if (role === 'assistant' && typeof content === 'string') return { role, content: content.slice(0, MAX_LARGO_TEXTO) };
+  if (role === 'tool' && typeof content === 'string' && typeof idLlamada === 'string') return { role, tool_call_id: idLlamada.slice(0, 64), content: content.slice(0, MAX_LARGO_HERRAMIENTA) };
+  throw errorHttp(400, 'mensajes_invalidos', 'Mensaje inválido');
+}
+
+function sinHuerfanos(mensajes) {
+  const conocidas = new Set();
+  const resultado = [];
+  for (const mensaje of mensajes) {
+    if (mensaje.tool_calls) mensaje.tool_calls.forEach(({ id }) => conocidas.add(id));
+    if (mensaje.role === 'tool' && !conocidas.has(mensaje.tool_call_id)) continue;
+    resultado.push(mensaje);
+  }
+  return resultado;
+}
+
 function sanear(mensajes) {
   if (!Array.isArray(mensajes) || !mensajes.length) throw errorHttp(400, 'mensajes_invalidos', 'Enviá al menos un mensaje');
-  return mensajes.slice(-MAX_MENSAJES).map(({ role, content }) => {
-    if (!['user', 'assistant'].includes(role) || typeof content !== 'string') {
-      throw errorHttp(400, 'mensajes_invalidos', 'Mensaje inválido');
-    }
-    return { role, content: content.slice(0, 1000) };
-  });
+  const recientes = mensajes.slice(-MAX_MENSAJES).map(sanearMensaje);
+  const desdeUsuario = recientes.findIndex(({ role }) => role === 'user');
+  return sinHuerfanos(desdeUsuario === -1 ? recientes : recientes.slice(desdeUsuario));
 }
 
 export async function responderChat(db, { mensajes, contexto = {}, alFallarHerramienta }, llamarModelo = llamarOpenAI) {
   const conversacion = [{ role: 'system', content: instrucciones(contexto) }, ...sanear(mensajes)];
-  const modelo = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const modelo = process.env.OPENAI_MODEL ?? 'gpt-4.1-mini';
+  const historial = [];
 
   for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta += 1) {
     const { choices } = await llamarModelo({ model: modelo, messages: conversacion, tools: HERRAMIENTAS });
     const mensaje = choices[0].message;
-    if (!mensaje.tool_calls?.length) return { respuesta: mensaje.content ?? '' };
+    if (!mensaje.tool_calls?.length) return { respuesta: mensaje.content ?? '', historial };
     conversacion.push(mensaje);
+    historial.push({ role: 'assistant', content: null, tool_calls: mensaje.tool_calls });
     for (const llamada of mensaje.tool_calls) {
       const resultado = resultadoDeHerramienta(db, llamada, contexto, alFallarHerramienta);
-      conversacion.push({ role: 'tool', tool_call_id: llamada.id, content: JSON.stringify(resultado) });
+      const respuestaHerramienta = { role: 'tool', tool_call_id: llamada.id, content: JSON.stringify(resultado) };
+      conversacion.push(respuestaHerramienta);
+      historial.push(respuestaHerramienta);
     }
   }
   throw errorHttp(502, 'asistente_error', 'El asistente no pudo completar la consulta');
