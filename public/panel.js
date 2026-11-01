@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba } from './dom.js';
 import { PLANTILLAS, plantillaPara } from './plantillas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
@@ -32,7 +32,7 @@ function mostrarLogin(googleHabilitado) {
       h('button', { type: 'submit' }, 'Ingresar'),
       h('button', { type: 'button', class: 'secundario', onclick: enviar('/api/auth/registro') }, 'Crear cuenta nueva')),
     googleHabilitado ? h('a', { class: 'boton secundario', href: '/api/auth/google?destino=/panel.html' }, 'Continuar con Google') : botonGoogleDeshabilitado(),
-    mensaje));
+    mensaje, cuentasDePrueba({ alIngresar: () => iniciar() })));
 }
 
 async function mostrarAlta() {

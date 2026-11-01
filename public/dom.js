@@ -168,3 +168,38 @@ export function botonUbicacionDeshabilitado() {
     h('button', { type: 'button', class: 'secundario', disabled: true }, '📍 Cerca de mí (automático)'),
     h('span', { class: 'suave' }, 'Próximamente: la ubicación automática quedaría disponible con certificado SSL (HTTPS); el navegador la bloquea sin él. Mientras tanto, escribí tu dirección.'));
 }
+
+const ICONOS_RUBRO = [
+  ['peluquer', '✂️'], ['barber', '✂️'], ['restaurante', '🍽️'], ['consultorio', '🩺'], ['pilates', '🧘'], ['yoga', '🧘'], ['cancha', '⚽'],
+  ['taller', '🔧'], ['gomer', '🛞'], ['lavadero', '🚗'], ['software', '💻'], ['desarroll', '💻'], ['veterinaria', '🐾'], ['spa', '💆'],
+];
+
+const sinTildes = (texto) => String(texto ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+export function iconoRubro(rubro) {
+  const buscado = sinTildes(rubro);
+  return ICONOS_RUBRO.find(([clave]) => buscado.includes(clave))?.[1] ?? '📍';
+}
+
+export function cuentasDePrueba({ alIngresar }) {
+  const contenedor = h('div');
+  api('/api/cuentas-prueba').then(({ activas, clave, cuentas }) => {
+    if (!activas || !cuentas.length) return;
+    const entrar = async (cuenta, boton) => {
+      boton.disabled = true;
+      try {
+        await api('/api/auth/login', { metodo: 'POST', cuerpo: { email: cuenta.email, password: clave } });
+        alIngresar(cuenta);
+      } catch (error) { boton.disabled = false; mostrarError(mensaje, error); }
+    };
+    const mensaje = h('p');
+    contenedor.append(h('div', { class: 'cuentas-prueba' },
+      h('strong', {}, 'Cuentas de prueba'), h('span', { class: 'suave' }, `Un toque para entrar (clave: ${clave})`),
+      h('div', { class: 'cuentas-grilla' }, ...cuentas.map((cuenta) => {
+        const boton = h('button', { type: 'button', class: 'secundario', onclick: () => entrar(cuenta, boton) },
+          h('span', {}, cuenta.slug ? iconoRubro(cuenta.rubro) : '🙋'), h('span', {}, cuenta.nombre));
+        return boton;
+      })), mensaje));
+  }).catch(() => {});
+  return contenedor;
+}

@@ -55,8 +55,8 @@ const HERRAMIENTAS = [
     parameters: parametros({
       slug: { type: 'string', description: 'slug o nombre del comercio' }, servicio: { type: 'string', description: 'nombre del servicio, tal cual figura en el comercio' },
       inicio: { type: 'string', description: 'AAAA-MM-DDTHH:MM' },
-      personas: { type: 'integer' }, cliente_nombre: { type: 'string' }, cliente_telefono: { type: 'string' },
-    }, ['slug', 'servicio', 'inicio', 'cliente_nombre']),
+      personas: { type: 'integer' }, cliente_nombre: { type: 'string', description: 'solo si la reserva es a nombre de otra persona' }, cliente_telefono: { type: 'string' },
+    }, ['slug', 'servicio', 'inicio']),
   },
   {
     name: 'mis_turnos',
@@ -70,7 +70,7 @@ const HERRAMIENTAS = [
   },
 ].map((funcion) => ({ type: 'function', function: funcion }));
 
-function fechaConDia(ahora) {
+export function fechaConDia(ahora = ahoraLocal()) {
   const dia = DIAS_SEMANA[new Date(`${ahora.slice(0, 10)}T00:00:00Z`).getUTCDay()];
   return `${dia} ${ahora.slice(0, 10)} ${ahora.slice(11)}`;
 }
@@ -79,15 +79,16 @@ function instrucciones(contexto) {
   const ubicacion = contexto.lat != null
     ? 'Conocés la ubicación del cliente: buscar_comercios y buscar_turnos_cercanos ya ordenan por cercanía y devuelven distancia_km.'
     : 'No conocés la ubicación del cliente: avisale una vez que puede tocar "Escribir mi dirección" arriba del chat para ver lo más cercano (la ubicación automática no está disponible), y mientras tanto seguí sin ella.';
+  const nombrePila = (contexto.usuarioNombre ?? '').split(' ')[0];
   const sesion = contexto.usuarioId
-    ? `El cliente tiene la sesión iniciada como ${contexto.usuarioNombre}.`
-    : 'El cliente NO inició sesión: puede consultar todo, pero para reservar o cancelar tiene que tocar "Ingresar" arriba del chat. Pedíselo recién cuando vaya a reservar.';
+    ? `YA CONOCÉS AL CLIENTE: está identificado por su teléfono ${contexto.usuarioTelefono || '(sin número)'} como ${contexto.usuarioNombre}. Tratalo por su nombre de pila (${nombrePila}) desde el primer mensaje, NO le pidas que inicie sesión ni le preguntes su nombre ni su teléfono: reservá a su nombre (y con su teléfono) salvo que él pida otro nombre.`
+    : 'El cliente NO está identificado: puede consultar todo, pero para reservar o cancelar tiene que tocar "Ingresar" arriba del chat.';
   const foco = contexto.slug ? `El cliente está mirando el comercio "${contexto.slug}": usalo por defecto.` : '';
   return [
     'Sos el asistente de turnos de una plataforma de reservas de comercios (canchas, restaurantes, peluquerías, consultorios, estudios). Hablás en español rioplatense, cálido y breve, como en WhatsApp.',
-    `Ahora es ${fechaConDia(ahoraLocal())} (hora de Argentina). Resolvé "hoy", "mañana", "el viernes" con esta fecha. ${ubicacion} ${sesion} ${foco}`,
+    `Ahora es ${fechaConDia()} (hora de Argentina): ya sabés la fecha y la hora, no se las preguntes. Saludá según la hora (buen día, buenas tardes o buenas noches) la primera vez. Resolvé "hoy", "mañana", "el viernes" con esta fecha. ${ubicacion} ${sesion} ${foco}`,
     'GUION: guiá al cliente con un ida y vuelta, UNA pregunta por mensaje. Averiguá en este orden lo que falte: 1) qué busca (servicio o rubro) y características que le importen, 2) para qué día y en qué momento u horario, 3) cuántas personas, 4) preferencias (más cerca, oferta). En cuanto sepas servicio y día, llamá a buscar_turnos_cercanos y proponé como máximo 3 opciones con comercio, distancia (si la hay), servicio, precio y 3 o 4 horarios. Después cerrá la elección y confirmá el resumen antes de reservar.',
-    'RESERVAS: antes de llamar a reservar mostrá el resumen (comercio, servicio, día y hora, personas, precio y a nombre de quién) y preguntá "¿Confirmo?". Al reservar informá el lugar asignado (plaza) y la dirección. Si el horario ya no está, ofrecé otros. Para cancelar: listá con mis_turnos, confirmá cuál y recién ahí llamá a cancelar_turno. Para cambiar un turno: reservá el nuevo y después cancelá el viejo, con confirmación.',
+    'RESERVAS: antes de llamar a reservar mostrá el resumen (comercio, servicio, día y hora, personas, precio y a nombre de quién; por defecto el nombre del cliente identificado) y preguntá "¿Confirmo?". Al reservar informá el lugar asignado (plaza) y la dirección. Si el horario ya no está, ofrecé otros. Para cancelar: listá con mis_turnos, confirmá cuál y recién ahí llamá a cancelar_turno. Para cambiar un turno: reservá el nuevo y después cancelá el viejo, con confirmación.',
     'PRECIOS: son fijos. Informalos exactamente como los devuelven las herramientas (texto con $), sin redondear ni calcular. No hay regateo ni descuentos: si piden rebaja respondé amable que los precios son fijos, y solo mencioná las ofertas publicadas (en_oferta = true). Informá SIEMPRE y en todos los mensajes el mismo precio_a_pagar del servicio elegido; si está en oferta, aclarala una vez con el precio normal tachado (precio_normal_sin_oferta).',
     'DATOS: usá siempre las herramientas para precios, horarios y disponibilidad; nunca inventes. Identificá el comercio por su slug (o nombre) y el servicio por su nombre exacto; nunca uses ids numéricos de servicio. Si buscar_comercios no devuelve resultados, probá con una palabra más corta o con texto vacío.',
     'FORMATO: mensajes cortos, texto plano con saltos de línea, sin títulos ni listas con guiones largos. Para resaltar usá *un asterisco* a cada lado (nunca doble) solo en una palabra o frase corta, por ejemplo *Fútbol 5 La Terraza*; no uses asteriscos en listas ni en líneas con dos puntos. Podés usar algún emoji. Al final de tu mensaje, cuando convenga ofrecer opciones tocables, agregá UNA última línea con este formato exacto: [Opciones: Hoy | Mañana | Esta semana] (máximo 4 opciones cortas, sin repetir lo que ya está en el texto).',
@@ -202,7 +203,8 @@ function ejecutarHerramienta(db, nombre, argumentos, contexto) {
       const servicio = resolverServicio(comercio, argumentos.servicio);
       const turno = reservarTurno(db, {
         usuarioId: contexto.usuarioId, comercioId: comercio.id, servicioId: servicio.id, inicio: argumentos.inicio,
-        personas: argumentos.personas ?? 1, clienteNombre: argumentos.cliente_nombre, clienteTelefono: argumentos.cliente_telefono ?? '',
+        personas: argumentos.personas ?? 1, clienteNombre: argumentos.cliente_nombre || contexto.usuarioNombre,
+        clienteTelefono: argumentos.cliente_telefono || contexto.usuarioTelefono || '',
       });
       return { ...turno, comercio: comercio.nombre, direccion: comercio.direccion, telefono: comercio.telefono, ...servicioParaModelo(servicio), id_turno: turno.id };
     }

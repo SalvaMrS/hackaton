@@ -1,5 +1,5 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario,
-  leerUbicacionGuardada, formularioDireccion, botonUbicacionDeshabilitado } from './dom.js';
+  leerUbicacionGuardada, formularioDireccion, iconoRubro, cuentasDePrueba } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -7,6 +7,7 @@ const barra = document.getElementById('acciones-barra');
 const ubicacion = leerUbicacionGuardada();
 const sesion = { usuario: null, googleHabilitado: false };
 let slugActual = null;
+const DIAS_A_EXPLORAR = 7;
 
 iniciarChat({ obtenerContexto: () => ({ ...ubicacion, slug: slugActual }) });
 
@@ -23,8 +24,8 @@ function dibujarBarra() {
       ? h('span', { class: 'fila' }, h('span', { class: 'suave' }, sesion.usuario.nombre || sesion.usuario.email),
         h('a', { class: 'boton secundario', href: '/#mis-turnos' }, 'Mis turnos'),
         h('button', { class: 'secundario', onclick: async () => { await api('/api/auth/salir', { metodo: 'POST' }); location.href = '/'; } }, 'Salir'))
-      : h('span', { class: 'suave' }, 'Navegá libremente; te pedimos ingresar al reservar.'),
-    h('a', { class: 'boton secundario', href: '/panel.html' }, 'Soy un comercio'));
+      : h('a', { class: 'boton secundario', href: '/?ingresar=1' }, 'Ingresar'),
+    h('a', { class: 'boton', href: '/panel.html' }, 'Soy un comercio'));
 }
 
 function formularioIngreso({ alIngresar, titulo = 'Ingresá para confirmar tu reserva' }) {
@@ -68,14 +69,50 @@ function resumirHorarios(horarios) {
 }
 
 function tarjetaComercio(comercio) {
-  return h('a', { class: 'tarjeta', href: `?c=${comercio.slug}`, style: 'text-decoration:none;color:inherit' },
-    comercio.imagen_url && h('img', { class: 'servicio-imagen', src: comercio.imagen_url, alt: comercio.nombre }),
+  const portada = comercio.imagen_url
+    ? h('img', { class: 'tarjeta-foto', src: comercio.imagen_url, alt: comercio.nombre, loading: 'lazy' })
+    : h('div', { class: 'tarjeta-foto sin-foto' }, iconoRubro(comercio.rubro));
+  return h('a', { class: 'tarjeta tarjeta-comercio', href: `?c=${comercio.slug}` },
+    h('div', { class: 'tarjeta-portada' }, portada,
+      h('span', { class: 'insignia' }, `${iconoRubro(comercio.rubro)} ${comercio.rubro}`),
+      comercio.distancia_km != null && h('span', { class: 'insignia distancia' }, `a ${comercio.distancia_km} km`)),
     h('strong', {}, comercio.nombre),
-    h('div', { class: 'fila' }, h('span', { class: 'etiqueta' }, comercio.rubro),
-      comercio.distancia_km != null && h('span', { class: 'suave' }, `a ${comercio.distancia_km} km`)),
-    h('p', { class: 'suave' }, comercio.servicios ?? 'Sin servicios cargados'),
+    h('p', { class: 'suave servicios-lista' }, comercio.servicios ?? 'Sin servicios cargados'),
     comercio.direccion && h('div', { class: 'suave' }, `📍 ${comercio.direccion}`),
     h('span', { class: 'boton' }, 'Ver y reservar'));
+}
+
+function tarjetaAnuncio(anuncio) {
+  const fondo = anuncio.imagen || anuncio.portada;
+  return h('a', { class: 'anuncio', href: `?c=${anuncio.slug}`, style: fondo ? `background-image:linear-gradient(90deg,#000b,#0002),url("${fondo}")` : '' },
+    h('span', { class: 'anuncio-etiqueta' }, '🔥 OFERTA'),
+    h('strong', {}, anuncio.servicio),
+    h('span', { class: 'anuncio-comercio' }, `${iconoRubro(anuncio.rubro)} ${anuncio.comercio}`),
+    h('span', { class: 'anuncio-precio' }, h('s', {}, dinero(anuncio.precio_normal)), ' ', h('b', {}, dinero(anuncio.precio_oferta))),
+    h('span', { class: 'boton' }, 'Reservar ahora'));
+}
+
+async function seccionPublicidad() {
+  const anuncios = await api('/api/anuncios').catch(() => []);
+  if (!anuncios.length) return null;
+  const pista = h('div', { class: 'anuncios-pista' }, ...anuncios.map(tarjetaAnuncio));
+  const mover = (sentido) => pista.scrollBy({ left: sentido * pista.clientWidth * 0.9, behavior: 'smooth' });
+  const avanzar = () => {
+    if (!pista.isConnected) { clearInterval(reloj); return; }
+    if (pista.scrollLeft + pista.clientWidth >= pista.scrollWidth - 4) pista.scrollTo({ left: 0, behavior: 'smooth' }); else mover(1);
+  };
+  const reloj = setInterval(avanzar, 5500);
+  return h('section', { class: 'anuncios' },
+    h('div', { class: 'anuncios-cabecera' }, h('h2', {}, 'Ofertas destacadas'), h('span', { class: 'etiqueta-publi' }, 'Publicidad de prueba')),
+    h('div', { class: 'anuncios-marco' }, pista,
+      h('button', { type: 'button', class: 'flecha izquierda', 'aria-label': 'Anterior', onclick: () => mover(-1) }, '‹'),
+      h('button', { type: 'button', class: 'flecha derecha', 'aria-label': 'Siguiente', onclick: () => mover(1) }, '›')));
+}
+
+function bandaParaComercios() {
+  return h('section', { class: 'banda-comercios' },
+    h('div', {}, h('h2', {}, '¿Tenés un comercio?'), h('p', {}, 'Dejá de perder turnos: tus clientes reservan solos y vos ves el salón en vivo.')),
+    h('a', { class: 'boton', href: '/panel.html' }, 'Anunciá tu comercio'));
 }
 
 function tarjetaTurno(turno, alCambiar) {
@@ -111,7 +148,7 @@ function seccionMisTurnos() {
 async function mostrarBuscador() {
   slugActual = null;
   const resultados = h('div', { class: 'grilla' });
-  const texto = h('input', { type: 'search', placeholder: 'Buscá un servicio, rubro o comercio…', style: 'flex:1;min-width:220px' });
+  const texto = h('input', { type: 'search', placeholder: 'Buscá un servicio, rubro o comercio…' });
   const estado = h('p', { class: 'suave' });
   const chips = h('div', { class: 'chips-rubro' });
   let rubroElegido = '';
@@ -121,7 +158,7 @@ async function mostrarBuscador() {
     chips.replaceChildren(...['', ...rubros].map((rubro) => h('button', {
       type: 'button', class: rubro === rubroElegido ? 'activa' : '',
       onclick: () => { rubroElegido = rubro; cargarRubros(); buscar(); },
-    }, rubro || 'Todos')));
+    }, rubro ? `${iconoRubro(rubro)} ${rubro}` : 'Todos')));
   }
 
   async function buscar() {
@@ -146,12 +183,19 @@ async function mostrarBuscador() {
     ubicacionTexto.textContent = aviso;
     zonaDireccion.replaceChildren(formularioDireccion({ alObtener: fijarUbicacion }));
   };
+  const publicidad = h('div');
+  seccionPublicidad().then((seccion) => seccion && publicidad.replaceChildren(seccion));
   app.replaceChildren(
-    h('h1', {}, 'Reservá turnos cerca tuyo'),
-    h('form', { class: 'fila', onsubmit: (evento) => { evento.preventDefault(); buscar(); } },
-      texto, h('button', { type: 'submit' }, 'Buscar'),
-      h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección')),
-    botonUbicacionDeshabilitado(), chips, ubicacionTexto, zonaDireccion, estado, resultados, sesion.usuario && seccionMisTurnos());
+    h('section', { class: 'hero' },
+      h('h1', {}, 'Reservá tu turno en segundos'),
+      h('p', {}, 'Canchas, restaurantes, talleres, spa, consultorios y más. Sin llamadas ni mensajes perdidos.'),
+      h('form', { class: 'hero-busqueda', onsubmit: (evento) => { evento.preventDefault(); buscar(); } }, texto, h('button', { type: 'submit' }, 'Buscar')),
+      h('div', { class: 'fila hero-acciones' },
+        h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección'),
+        h('button', { type: 'button', class: 'secundario', disabled: true, title: 'Disponible con certificado SSL (HTTPS)' }, '📍 Cerca de mí · requiere SSL'))),
+    h('div', { class: 'seccion' }, ubicacionTexto, zonaDireccion), publicidad,
+    h('section', { class: 'seccion' }, h('h2', {}, 'Comercios'), chips, estado, resultados),
+    ...(sesion.usuario ? [seccionMisTurnos()] : []), bandaParaComercios());
   cargarRubros();
   buscar();
   if (ubicacion.lat != null) fijarUbicacion(ubicacion);
@@ -167,6 +211,7 @@ async function mostrarComercio(slug) {
   }
   const reserva = { servicio: null, inicio: null };
   const fecha = h('input', { type: 'date', value: fechaHoy(), min: fechaHoy() });
+  const hayGrupos = comercio.capacidad_maxima > 1;
   const personas = contador({ min: 1, max: comercio.capacidad_maxima || 1, valor: 1 });
   const atajos = h('div', { class: 'segmentado' }, ...[['Hoy', 0], ['Mañana', 1], ['Pasado mañana', 2]].map(([texto, dias]) => h('button', {
     type: 'button', 'data-fecha': fechaHoy(dias), onclick: () => { fecha.value = fechaHoy(dias); marcarAtajos(); cargarFranjas(); },
@@ -180,9 +225,11 @@ async function mostrarComercio(slug) {
   const zonaIngreso = h('div');
   const pasoReserva = h('div', { class: 'tarjeta', hidden: true },
     h('h2', { style: 'margin-top:0' }, '2. Elegí día y horario'),
-    h('div', { class: 'fila', style: 'align-items:flex-end;gap:18px' }, campoFormulario('¿Para cuántas personas?', personas),
+    h('div', { class: 'fila', style: 'align-items:flex-end;gap:18px' }, hayGrupos ? campoFormulario('¿Para cuántas personas?', personas) : null,
       campoFormulario('Día', h('div', { class: 'fila' }, atajos, fecha))),
-    h('p', { class: 'suave' }, `Te asignamos automáticamente el lugar que mejor se ajuste (hasta ${comercio.capacidad_maxima} personas por reserva).`),
+    h('p', { class: 'suave' }, hayGrupos
+      ? `Te asignamos automáticamente el lugar que mejor se ajuste (hasta ${comercio.capacidad_maxima} personas por reserva).`
+      : 'Te asignamos automáticamente el lugar disponible.'),
     h('p', { class: 'suave' }, 'Horarios disponibles'), franjas,
     h('h2', {}, '3. ¿A nombre de quién?'),
     h('div', { class: 'fila' }, nombre, telefono, confirmar), mensaje, zonaIngreso);
@@ -202,7 +249,8 @@ async function mostrarComercio(slug) {
           confirmar.disabled = false;
         },
       }, franja.inicio.slice(11))) : [h('span', { class: 'suave' }, 'No hay lugar libre para esa cantidad de personas ese día.')]));
-    } catch (error) { mostrarError(franjas, error); }
+      return lista;
+    } catch (error) { mostrarError(franjas, error); return []; }
   }
 
   function intentarReservar() {
@@ -231,10 +279,17 @@ async function mostrarComercio(slug) {
     }
   }
 
-  function elegirServicio(servicio) {
+  async function elegirServicio(servicio) {
     reserva.servicio = servicio;
     pasoReserva.hidden = false;
     pasoReserva.scrollIntoView({ behavior: 'smooth' });
+    for (let dias = 0; dias <= DIAS_A_EXPLORAR; dias += 1) {
+      fecha.value = fechaHoy(dias);
+      marcarAtajos();
+      if ((await cargarFranjas()).length) return;
+    }
+    fecha.value = fechaHoy();
+    marcarAtajos();
     cargarFranjas();
   }
 
@@ -268,11 +323,14 @@ async function mostrarComercio(slug) {
 }
 
 function mostrarIngreso() {
-  const alIngresar = () => app.replaceChildren(
+  const desdeChat = Boolean(window.opener);
+  const alIngresar = () => (desdeChat ? terminarIngreso() : (location.href = '/'));
+  const terminarIngreso = () => app.replaceChildren(
     h('h1', { class: 'mensaje-ok' }, '¡Listo, ya ingresaste!'),
     h('p', {}, 'Volvé al chat para seguir con tu reserva.'),
     h('div', { class: 'fila' }, h('button', { onclick: () => window.close() }, 'Cerrar esta pestaña'), h('a', { class: 'boton secundario', href: '/' }, 'Ir al inicio')));
-  app.replaceChildren(h('h1', {}, 'Ingresá a tu cuenta'), formularioIngreso({ alIngresar, titulo: 'Usuario y contraseña' }));
+  app.replaceChildren(h('div', { class: 'seccion estrecha' }, h('h1', {}, 'Ingresá a tu cuenta'),
+    formularioIngreso({ alIngresar, titulo: 'Usuario y contraseña' }), cuentasDePrueba({ alIngresar })));
 }
 
 await cargarSesion();

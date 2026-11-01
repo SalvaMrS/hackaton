@@ -3,8 +3,11 @@ import path from 'node:path';
 import { abrirBaseDeDatos } from '../src/db.js';
 import { hashearPassword } from '../src/auth.js';
 import { DIRECTORIO_SUBIDAS } from '../src/imagenes.js';
+import { ahoraLocal, calcularDisponibilidad, reservarTurno } from '../src/turnos.js';
 
 const ALTO_MAPA_CQW = 56.25;
+const CLAVE_DE_PRUEBA = 'test123';
+const CLIENTE_POR_DEFECTO = { nombre: 'Lucía Fernández', telefono: '+54 9 341 555 0100' };
 const TODOS_LOS_DIAS = [0, 1, 2, 3, 4, 5, 6];
 const FOTOS = {
   barberia: '1585747860715-2ba37e788b70', corte: '1622286342621-4bd786c2447c', barba: '1599351431202-1e0f0137899a', color: '1522337360788-8b13dee7a37e',
@@ -12,6 +15,12 @@ const FOTOS = {
   cancha: '1431324155629-1a6deb1dec8d', pelota: '1574629810360-7efbbe195018', partido: '1560272564-c83b66b1ad12',
   clinica: '1519494026892-80bbd2d6fd0d', doctor: '1576091160399-112ba8d25d1d', dental: '1629909613654-28e377c37b09', control: '1505751172876-fa1923c5c528',
   pilates: '1518611012118-696072aa579a', yoga: '1544367567-0f2fcb009e0b', estiramiento: '1593810450967-f9c42742e326',
+  taller: '1625047509248-ec889cbff17f', mecanico: '1619642751034-765dfdf7c58e', motor: '1486262715619-67b85e0b08d3',
+  gomeria: '1530046339160-ce3e530c7d2f', neumatico: '1558618666-fcd25c85cd64',
+  lavadero: '1520340356584-f9917d1eea6f', lavado: '1607860108855-64acf2078ed9', pulido: '1632823469850-2f77dd9c7f93',
+  software: '1522071820081-009f0129c71c', codigo: '1461749280684-dccba630e2f6', laptop: '1498050108023-c5249f4df085', codigo2: '1555066931-4365d14bab8c',
+  veterinaria: '1548199973-03cce0bbc87b', vet1: '1587300003388-59208cc962cb', vet2: '1583511655857-d19b40a7a54e', vet3: '1612536057832-2ff7ead58194',
+  spa: '1544161515-4ab6ce6db874', masaje: '1600334129128-685c5582fd35', spa1: '1519823551278-64ac92734fb1', spa2: '1540555700478-4be289fbecef',
 };
 
 const plaza = (nombre, tipo, capacidad, forma, x, y, ancho, alto, color = '', descripcion = '') =>
@@ -119,6 +128,115 @@ const COMERCIOS = [
     ],
     guias: [...perimetro(), linea(84, 3, 84, 97)],
   },
+  {
+    slug: 'taller-rapida-sur', nombre: 'Taller Mecánico Rápida Sur', rubro: 'taller mecánico', direccion: 'Av. San Martín 4300, Rosario', telefono: '341 555 0606',
+    lat: -32.9712, lng: -60.6603, foto: 'taller', dias: [1, 2, 3, 4, 5, 6], horario: ['08:00', '18:00'],
+    descripcion: 'Mecánica integral, service oficial, alineación y diagnóstico computarizado. Turnos sin demoras.',
+    servicios: [
+      { nombre: 'Cambio de aceite y filtro', duracion: 45, precio: 4500000, oferta: 3800000, tipo: 'Elevador', car: 'Aceite sintético y filtro incluidos', foto: 'mecanico' },
+      { nombre: 'Alineación y balanceo', duracion: 60, precio: 3800000, tipo: 'Elevador', car: 'Las cuatro ruedas', foto: 'taller' },
+      { nombre: 'Service completo', duracion: 180, precio: 12000000, tipo: 'Elevador', car: 'Frenos, filtros, aceite y revisión de 30 puntos', foto: 'motor' },
+      { nombre: 'Inspección bajo el vehículo', duracion: 30, precio: 1500000, tipo: 'Fosa', car: 'Con informe escrito' },
+      { nombre: 'Diagnóstico computarizado', duracion: 30, precio: 2500000, tipo: 'Diagnóstico', car: 'Lectura de fallas y mapa de sensores' },
+      { nombre: 'Cambio de neumáticos', duracion: 40, precio: 2000000, tipo: 'Neumáticos', car: 'Colocación y balanceo' },
+    ],
+    plazas: [
+      plaza('Elevador 1', 'Elevador', 1, 'rectangulo', 18, 12, 16, 11, '#64748b'), plaza('Elevador 2', 'Elevador', 1, 'rectangulo', 42, 12, 16, 11, '#64748b'),
+      plaza('Elevador 3', 'Elevador', 1, 'rectangulo', 66, 12, 16, 11, '#64748b'),
+      plaza('Fosa 1', 'Fosa', 1, 'rectangulo', 20, 32, 20, 7, '#334155'), plaza('Fosa 2', 'Fosa', 1, 'rectangulo', 46, 32, 20, 7, '#334155'),
+      plaza('Box de diagnóstico', 'Diagnóstico', 1, 'circulo', 74, 34, 11, 11, '#0ea5e9'),
+      plaza('Zona de neumáticos', 'Neumáticos', 1, 'rectangulo', 30, 47, 24, 8, '#a16207'),
+    ],
+    guias: [...perimetro(), linea(4, 41, 96, 41)],
+  },
+  {
+    slug: 'gomeria-el-ruleman', nombre: 'Gomería y Lubricentro El Rulemán', rubro: 'gomería', direccion: 'Bv. Rondeau 1850, Rosario', telefono: '341 555 0707',
+    lat: -32.9361, lng: -60.6702, foto: 'gomeria', dias: [1, 2, 3, 4, 5, 6], horario: ['08:00', '19:00'],
+    descripcion: 'Neumáticos nuevos y usados, reparaciones, balanceo y lubricación. Colocación en el día.',
+    servicios: [
+      { nombre: 'Reparación de pinchadura', duracion: 20, precio: 600000, tipo: 'Puesto', car: 'Con parche y control de presión', foto: 'neumatico' },
+      { nombre: 'Neumático 175/65 R14 con colocación', duracion: 30, precio: 8500000, tipo: 'Puesto', car: 'Producto con colocación y balanceo incluidos', foto: 'gomeria' },
+      { nombre: 'Cambio de aceite', duracion: 30, precio: 3000000, tipo: 'Lubricación', car: 'Aceite 10W40 y filtro' },
+      { nombre: 'Balanceo', duracion: 30, precio: 1200000, oferta: 990000, tipo: 'Balanceo', car: 'Por rueda, con contrapesos' },
+    ],
+    plazas: [
+      plaza('Puesto 1', 'Puesto', 1, 'rectangulo', 18, 14, 18, 12, '#475569'), plaza('Puesto 2', 'Puesto', 1, 'rectangulo', 42, 14, 18, 12, '#475569'),
+      plaza('Puesto 3', 'Puesto', 1, 'rectangulo', 66, 14, 18, 12, '#475569'),
+      plaza('Lubricentro', 'Lubricación', 1, 'rectangulo', 28, 38, 28, 10, '#ca8a04', 'Foso con elevador.'),
+      plaza('Balanceadora', 'Balanceo', 1, 'circulo', 66, 38, 11, 11, '#f59e0b'),
+    ],
+    guias: [...perimetro(), linea(4, 28, 96, 28)],
+  },
+  {
+    slug: 'lavadero-burbuja', nombre: 'Lavadero Burbuja', rubro: 'lavadero de autos', direccion: 'Av. Pellegrini 2900, Rosario', telefono: '341 555 0808',
+    lat: -32.9555, lng: -60.6811, foto: 'lavadero', dias: TODOS_LOS_DIAS, horario: ['09:00', '19:00'],
+    descripcion: 'Lavado a mano y a máquina, pulido, encerado y limpieza de tapizados. Dejá el auto y volvé.',
+    servicios: [
+      { nombre: 'Lavado exterior', duracion: 30, precio: 900000, tipo: 'Box', car: 'Shampoo, enjuague y secado', foto: 'lavado' },
+      { nombre: 'Lavado completo', duracion: 60, precio: 1800000, oferta: 1490000, tipo: 'Box', car: 'Exterior, interior y cubiertas', foto: 'lavadero' },
+      { nombre: 'Pulido y encerado', duracion: 120, precio: 4500000, tipo: 'Box', car: 'Pulido en tres pasos y cera', foto: 'pulido' },
+      { nombre: 'Aspirado de interior', duracion: 20, precio: 600000, tipo: 'Aspirado', car: 'Butacas, alfombras y baúl' },
+    ],
+    plazas: [
+      ...[14, 38, 62, 86].map((x, i) => plaza(`Box ${i + 1}`, 'Box', 1, 'rectangulo', x, 14, 20, 14, i % 2 ? '#38bdf8' : '#0ea5e9')),
+      plaza('Aspirado 1', 'Aspirado', 1, 'circulo', 20, 40, 9, 9, '#a3a3a3'), plaza('Aspirado 2', 'Aspirado', 1, 'circulo', 40, 40, 9, 9, '#a3a3a3'),
+      plaza('Zona de secado', 'Secado', 1, 'rectangulo', 74, 40, 34, 10, '#cbd5e1'),
+    ],
+    guias: [...perimetro(), linea(4, 30, 96, 30)],
+  },
+  {
+    slug: 'codigo-norte-software', nombre: 'Código Norte Software', rubro: 'desarrollo de software', direccion: 'Santa Fe 1500, Rosario', telefono: '341 555 0909',
+    lat: -32.9420, lng: -60.6350, foto: 'software', dias: [1, 2, 3, 4, 5], horario: ['09:00', '18:00'],
+    descripcion: 'Estudio de desarrollo web y móvil. Reuniones de relevamiento, consultoría técnica y coworking para equipos.',
+    servicios: [
+      { nombre: 'Reunión de relevamiento', duracion: 30, precio: 0, tipo: 'Sala', car: 'Sin cargo: contanos tu idea', foto: 'software' },
+      { nombre: 'Consultoría técnica (1 hora)', duracion: 60, precio: 6000000, tipo: 'Sala', car: 'Arquitectura, stack y presupuesto', foto: 'codigo' },
+      { nombre: 'Mentoría de código', duracion: 60, precio: 4500000, tipo: 'Sala', car: 'Revisión de código y buenas prácticas', foto: 'codigo2' },
+      { nombre: 'Coworking por día', duracion: 480, precio: 1200000, oferta: 900000, tipo: 'Escritorio', car: 'Escritorio, wifi y café', foto: 'laptop' },
+    ],
+    plazas: [
+      plaza('Sala de reuniones 1', 'Sala', 8, 'rectangulo', 20, 14, 26, 16, '#6366f1'), plaza('Sala de reuniones 2', 'Sala', 6, 'rectangulo', 50, 14, 26, 16, '#818cf8'),
+      plaza('Sala de videollamadas', 'Sala', 4, 'rectangulo', 80, 14, 18, 16, '#a5b4fc'),
+      ...[14, 32, 50, 68].map((x, i) => plaza(`Escritorio ${i + 1}`, 'Escritorio', 1, 'rectangulo', x, 38, 11, 7, '#94a3b8')),
+    ],
+    guias: [...perimetro(), linea(4, 27, 96, 27)],
+  },
+  {
+    slug: 'veterinaria-patitas', nombre: 'Veterinaria Patitas', rubro: 'veterinaria', direccion: 'Dorrego 800, Rosario', telefono: '341 555 1010',
+    lat: -32.9488, lng: -60.6580, foto: 'veterinaria', dias: [1, 2, 3, 4, 5, 6], horario: ['09:00', '19:00'],
+    descripcion: 'Clínica veterinaria, vacunación, cirugía y peluquería canina con turno.',
+    servicios: [
+      { nombre: 'Consulta clínica', duracion: 30, precio: 2000000, tipo: 'Consultorio', car: 'Perros, gatos y animales pequeños', foto: 'vet1' },
+      { nombre: 'Vacunación', duracion: 15, precio: 1500000, oferta: 1200000, tipo: 'Consultorio', car: 'Incluye libreta sanitaria', foto: 'vet2' },
+      { nombre: 'Baño y corte', duracion: 60, precio: 2500000, tipo: 'Baño', car: 'Secado y perfume', foto: 'vet3' },
+      { nombre: 'Cirugía programada', duracion: 120, precio: 8000000, tipo: 'Quirófano', car: 'Con control previo y posoperatorio' },
+    ],
+    plazas: [
+      plaza('Consultorio 1', 'Consultorio', 1, 'rectangulo', 16, 14, 22, 15, '#34d399'), plaza('Consultorio 2', 'Consultorio', 1, 'rectangulo', 42, 14, 22, 15, '#6ee7b7'),
+      plaza('Quirófano', 'Quirófano', 1, 'rectangulo', 70, 14, 22, 15, '#f87171'),
+      plaza('Mesa de baño 1', 'Baño', 1, 'circulo', 18, 38, 9, 9, '#38bdf8'), plaza('Mesa de baño 2', 'Baño', 1, 'circulo', 34, 38, 9, 9, '#7dd3fc'),
+      plaza('Sala de internación', 'Internación', 4, 'rectangulo', 68, 40, 30, 10, '#fbbf24'),
+    ],
+    guias: [...perimetro(), linea(4, 30, 96, 30)],
+  },
+  {
+    slug: 'spa-sereno', nombre: 'Spa Sereno', rubro: 'spa y estética', direccion: 'Rioja 1250, Rosario', telefono: '341 555 1111',
+    lat: -32.9338, lng: -60.6428, foto: 'spa', dias: [1, 2, 3, 4, 5, 6], horario: ['10:00', '20:00'],
+    descripcion: 'Masajes, tratamientos faciales, manicuría y días de spa para desconectar.',
+    servicios: [
+      { nombre: 'Masaje descontracturante', duracion: 60, precio: 2800000, tipo: 'Cabina', car: 'Con piedras calientes', foto: 'masaje' },
+      { nombre: 'Limpieza facial', duracion: 45, precio: 2200000, oferta: 1700000, tipo: 'Cabina', car: 'Hidratación profunda', foto: 'spa1' },
+      { nombre: 'Manicuría', duracion: 45, precio: 1200000, tipo: 'Manicuría', car: 'Esmaltado semipermanente', foto: 'spa2' },
+      { nombre: 'Pack día de spa', duracion: 180, precio: 8500000, tipo: 'Cabina', car: 'Masaje, facial y circuito de hidromasaje', foto: 'spa' },
+    ],
+    plazas: [
+      plaza('Cabina 1', 'Cabina', 1, 'rectangulo', 16, 14, 22, 16, '#f9a8d4'), plaza('Cabina 2', 'Cabina', 1, 'rectangulo', 42, 14, 22, 16, '#fbcfe8'),
+      plaza('Cabina 3', 'Cabina', 2, 'rectangulo', 68, 14, 22, 16, '#f472b6', 'Cabina doble para parejas.'),
+      plaza('Hidromasaje', 'Hidromasaje', 4, 'circulo', 20, 40, 14, 14, '#7dd3fc'),
+      ...[46, 58, 70].map((x, i) => plaza(`Manicuría ${i + 1}`, 'Manicuría', 1, 'circulo', x, 40, 8, 8, '#c4b5fd')),
+    ],
+    guias: [...perimetro(), linea(4, 30, 96, 30)],
+  },
 ];
 
 async function descargarFoto(clave, ancho) {
@@ -169,19 +287,69 @@ async function cargarComercio(db, comercio) {
   for (const g of comercio.guias) db.prepare('INSERT INTO guias (comercio_id, x1, y1, x2, y2) VALUES (?, ?, ?, ?, ?)').run(id, g.x1, g.y1, g.x2, g.y2);
   for (const dia of comercio.dias) db.prepare('INSERT INTO horarios (comercio_id, dia_semana, apertura, cierre) VALUES (?, ?, ?, ?)').run(id, dia, ...comercio.horario);
   db.prepare('INSERT INTO usuarios (comercio_id, email, nombre, password_hash) VALUES (?, ?, ?, ?)')
-    .run(id, `${comercio.slug}@demo.com`, comercio.nombre, hashearPassword('demo1234'));
+    .run(id, `${comercio.slug}@demo.com`, comercio.nombre, hashearPassword(CLAVE_DE_PRUEBA));
   db.exec('COMMIT');
+}
+
+const NOMBRES_CLIENTES = ['Lucía Fernández', 'Mateo Gómez', 'Sofía Rossi', 'Diego Martínez', 'Valentina Paz', 'Joaquín Ledesma'];
+const ESCENARIOS_EN_VIVO = [
+  { estado: 'en_curso', desfase: -25 }, { estado: 'confirmado', desfase: 15 }, { estado: 'confirmado', desfase: -5 },
+  { estado: 'confirmado', desfase: -18 }, { estado: 'confirmado', desfase: -40 },
+];
+
+function desplazar(local, minutos) {
+  return new Date(Date.parse(`${local}:00Z`) + minutos * 60_000).toISOString().slice(0, 16);
+}
+
+function cargarMovimientoEnVivo(db, slug) {
+  const comercio = db.prepare('SELECT id FROM comercios WHERE slug = ?').get(slug);
+  const servicios = db.prepare('SELECT id, duracion_min, tipo_plaza FROM servicios WHERE comercio_id = ?').all(comercio.id);
+  const plazas = db.prepare('SELECT id, tipo FROM plazas WHERE comercio_id = ? ORDER BY id').all(comercio.id);
+  const ahora = ahoraLocal();
+  ESCENARIOS_EN_VIVO.forEach((escenario, indice) => {
+    const plaza = plazas[indice];
+    const servicio = plaza && servicios.find(({ tipo_plaza: tipo }) => !tipo || tipo.toLowerCase() === plaza.tipo.toLowerCase());
+    if (!servicio) return;
+    const inicio = desplazar(ahora, escenario.desfase);
+    db.prepare(
+      `INSERT INTO turnos (comercio_id, servicio_id, plaza_id, inicio, fin, cliente_nombre, personas, estado, codigo)
+       VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)`,
+    ).run(comercio.id, servicio.id, plaza.id, inicio, desplazar(inicio, Math.max(servicio.duracion_min, 90)),
+      NOMBRES_CLIENTES[indice % NOMBRES_CLIENTES.length], escenario.estado, `V${comercio.id}${indice}${Math.floor(Math.random() * 900 + 100)}`);
+  });
+}
+
+function cargarCliente(db, comerciosNuevos) {
+  const existente = db.prepare('SELECT id FROM usuarios WHERE email = ?').get('cliente@test.com');
+  const usuarioId = existente?.id ?? Number(db.prepare('INSERT INTO usuarios (email, nombre, password_hash) VALUES (?, ?, ?)')
+    .run('cliente@test.com', CLIENTE_POR_DEFECTO.nombre, hashearPassword(CLAVE_DE_PRUEBA)).lastInsertRowid);
+  db.prepare('UPDATE usuarios SET nombre = ?, telefono = ? WHERE id = ?').run(CLIENTE_POR_DEFECTO.nombre, CLIENTE_POR_DEFECTO.telefono, usuarioId);
+  for (const slug of comerciosNuevos.filter((candidato) => ['futbol-5-la-terraza', 'la-parrilla-del-puerto', 'spa-sereno'].includes(candidato))) {
+    const comercio = db.prepare('SELECT id FROM comercios WHERE slug = ?').get(slug);
+    const servicio = db.prepare('SELECT id FROM servicios WHERE comercio_id = ? ORDER BY id LIMIT 1').get(comercio.id);
+    for (let dias = 1; dias <= 4; dias += 1) {
+      const fecha = desplazar(ahoraLocal(), dias * 1440).slice(0, 10);
+      const franja = calcularDisponibilidad(db, { comercioId: comercio.id, servicioId: servicio.id, fecha })[4];
+      if (!franja) continue;
+      reservarTurno(db, { comercioId: comercio.id, servicioId: servicio.id, usuarioId, inicio: franja.inicio, clienteNombre: CLIENTE_POR_DEFECTO.nombre, clienteTelefono: CLIENTE_POR_DEFECTO.telefono, personas: 1 });
+      break;
+    }
+  }
 }
 
 const reiniciar = process.argv.includes('--reiniciar');
 const db = abrirBaseDeDatos();
 await mkdir(DIRECTORIO_SUBIDAS, { recursive: true });
+const cargados = [];
 for (const comercio of COMERCIOS) {
   if (db.prepare('SELECT 1 FROM comercios WHERE slug = ?').get(comercio.slug)) {
     if (!reiniciar) continue;
     borrarComercio(db, comercio.slug);
   }
   await cargarComercio(db, comercio);
+  cargarMovimientoEnVivo(db, comercio.slug);
+  cargados.push(comercio.slug);
   console.log(`+ ${comercio.nombre}`);
 }
-console.log('Demo lista. Usuarios: <slug>@demo.com / demo1234');
+cargarCliente(db, cargados);
+console.log(`Demo lista. Cuentas: <slug>@demo.com y cliente@test.com, clave ${CLAVE_DE_PRUEBA}`);

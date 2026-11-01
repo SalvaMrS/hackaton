@@ -3,10 +3,11 @@ import { textoRequerido, textoOpcional, enteroEnRango, coordenadaOpcional } from
 import { calcularDisponibilidad, reservarTurno, validarFecha } from './turnos.js';
 import { listarComercios, detalleComercio, buscarComercioPorSlug } from './comercios.js';
 
-import { responderChat } from './chat.js';
+import { responderChat, fechaConDia } from './chat.js';
 
 const ESTADOS = ['confirmado', 'en_curso', 'atendido', 'cancelado', 'ausente'];
 const LIMITE_CHAT_POR_MINUTO = 20;
+const TELEFONO_POR_DEFECTO = '+54 9 341 555 0100';
 
 function leerContextoChat(contexto = {}) {
   return {
@@ -29,10 +30,42 @@ function leerReserva(body) {
 export function rutasPublicas(app) {
   const { db } = app;
 
-  const contextoDelChat = (req) => {
-    const usuario = usuarioActual(app, req);
-    return { ...leerContextoChat(req.body?.contexto), usuarioId: usuario?.id ?? null, usuarioNombre: usuario?.nombre || usuario?.email || '' };
+  const identidadDelChat = (req) => {
+    const sesion = usuarioActual(app, req);
+    const usuario = sesion
+      ? db.prepare('SELECT id, nombre, email, telefono FROM usuarios WHERE id = ?').get(sesion.id)
+      : db.prepare('SELECT id, nombre, email, telefono FROM usuarios WHERE telefono = ?').get(process.env.CHAT_TELEFONO_POR_DEFECTO ?? TELEFONO_POR_DEFECTO);
+    return usuario ? { ...usuario, fuente: sesion ? 'sesion' : 'telefono' } : null;
   };
+
+  const contextoDelChat = (req) => {
+    const usuario = identidadDelChat(req);
+    return {
+      ...leerContextoChat(req.body?.contexto), usuarioId: usuario?.id ?? null,
+      usuarioNombre: usuario?.nombre || usuario?.email || '', usuarioTelefono: usuario?.telefono ?? '',
+    };
+  };
+
+  app.get('/api/chat/identidad', async (req) => {
+    const usuario = identidadDelChat(req);
+    return { ahora: fechaConDia(), cliente: usuario && { nombre: usuario.nombre || usuario.email, telefono: usuario.telefono, fuente: usuario.fuente } };
+  });
+
+  app.get('/api/anuncios', async () => db.prepare(
+    `SELECT c.nombre AS comercio, c.slug, c.rubro, c.imagen_url AS portada, s.nombre AS servicio, s.imagen_url AS imagen,
+            s.precio_centavos AS precio_normal, s.precio_oferta_centavos AS precio_oferta
+     FROM servicios s JOIN comercios c ON c.id = s.comercio_id
+     WHERE s.oferta = 1 AND s.activo = 1 ORDER BY c.id, s.id LIMIT 12`,
+  ).all());
+
+  app.get('/api/cuentas-prueba', async () => {
+    if (process.env.CUENTAS_PRUEBA !== '1') return { activas: false, cuentas: [] };
+    const cuentas = db.prepare(
+      `SELECT u.email, u.nombre, c.slug, c.rubro FROM usuarios u LEFT JOIN comercios c ON c.id = u.comercio_id
+       WHERE u.email LIKE '%@demo.com' OR u.email = 'cliente@test.com' ORDER BY (c.id IS NULL) DESC, c.nombre`,
+    ).all();
+    return { activas: true, clave: 'test123', cuentas };
+  });
 
   app.get('/api/rubros', async () =>
     db.prepare('SELECT MIN(rubro) AS rubro FROM comercios GROUP BY lower(rubro) ORDER BY lower(rubro)').all().map(({ rubro }) => rubro));

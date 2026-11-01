@@ -16,14 +16,14 @@ Requiere Node 26.12+ (usa `node:sqlite`, sin dependencias nativas).
 
 ```sh
 npm ci
-npm run semilla      # carga 5 comercios de ejemplo con fotos (necesita internet la primera vez)
+npm run semilla      # carga 11 comercios de ejemplo con fotos y movimiento en vivo (necesita internet la primera vez)
 npm start            # http://localhost:3000
 npm test             # 50 tests
 ```
 
 Variables en `~/.env` (nunca dentro del proyecto): `OPENAI_API_KEY` (asistente), `OPENAI_MODEL` (opcional), `SESSION_SECRET`, `PORT`, `DB_PATH`, `UPLOAD_DIR`.
 
-**Usuarios de demo:** `<slug>@demo.com` con clave `demo1234`, por ejemplo `futbol-5-la-terraza@demo.com`, `la-parrilla-del-puerto@demo.com`, `barberia-el-corte@demo.com`, `consultorio-dra-lopez@demo.com`, `pilates-armonia@demo.com`.
+**Cuentas de prueba** (clave `test123`): un cliente, `cliente@test.com`, y un usuario por comercio, `<slug>@demo.com` (por ejemplo `futbol-5-la-terraza@demo.com`, `taller-rapida-sur@demo.com`, `spa-sereno@demo.com`). Con `CUENTAS_PRUEBA=1` las pantallas de ingreso muestran un botón por cuenta para entrar con un toque.
 
 ## Decisiones técnicas
 - **Un solo modelo para todos los rubros:** servicio + plaza. El servicio indica qué *tipo* de plaza usa; al reservar se asigna automáticamente la plaza libre más ajustada a la cantidad de personas.

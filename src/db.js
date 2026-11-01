@@ -69,6 +69,7 @@ CREATE INDEX IF NOT EXISTS idx_turnos_comercio_inicio ON turnos(comercio_id, ini
 `;
 
 const COLUMNAS_NUEVAS = [
+  ['usuarios', 'telefono', 'TEXT'],
   ['comercios', 'imagen_url', "TEXT NOT NULL DEFAULT ''"],
   ['servicios', 'imagen_url', "TEXT NOT NULL DEFAULT ''"],
   ['servicios', 'tipo_plaza', "TEXT NOT NULL DEFAULT ''"],
@@ -92,6 +93,7 @@ function agregarColumnasFaltantes(db) {
     const existe = db.prepare(`PRAGMA table_info(${tabla})`).all().some(({ name }) => name === columna);
     if (!existe) db.exec(`ALTER TABLE ${tabla} ADD COLUMN ${columna} ${definicion}`);
   }
+  db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_usuarios_telefono ON usuarios(telefono) WHERE telefono IS NOT NULL');
 }
 
 export function abrirBaseDeDatos(ruta = process.env.DB_PATH ?? 'turnos.db') {
