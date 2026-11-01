@@ -28,18 +28,23 @@ export function detalleComercio(db, slug) {
   };
 }
 
+const normalizar = (texto) => String(texto ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+function coincide(comercio, { q, rubro }) {
+  if (rubro && normalizar(comercio.rubro) !== normalizar(rubro)) return false;
+  const consulta = normalizar(q);
+  if (!consulta) return true;
+  return normalizar(`${comercio.nombre} ${comercio.rubro} ${comercio.servicios ?? ''}`).includes(consulta);
+}
+
 export function listarComercios(db, { q, rubro, lat, lng }) {
   const origen = lat != null && lng != null
     ? { lat: coordenadaOpcional(lat, 'lat', 90), lng: coordenadaOpcional(lng, 'lng', 180) }
     : null;
-  const patron = `%${(q ?? '').toLowerCase()}%`;
   const filas = db.prepare(
     `SELECT c.*, (SELECT group_concat(s.nombre, ', ') FROM servicios s WHERE s.comercio_id = c.id AND s.activo = 1) AS servicios
-     FROM comercios c
-     WHERE (? = '' OR lower(c.rubro) = lower(?))
-       AND (lower(c.nombre) LIKE ? OR lower(c.rubro) LIKE ? OR EXISTS (
-         SELECT 1 FROM servicios s WHERE s.comercio_id = c.id AND s.activo = 1 AND lower(s.nombre) LIKE ?))`,
-  ).all(rubro ?? '', rubro ?? '', patron, patron, patron);
+     FROM comercios c`,
+  ).all().filter((fila) => coincide(fila, { q, rubro }));
 
   const conDistancia = filas.map((fila) => ({
     ...fila,
