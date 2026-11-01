@@ -97,7 +97,7 @@ export function rutasAuth(app) {
     return reply.redirect(`${GOOGLE_AUTORIZAR}?${parametros}`);
   });
 
-  app.get('/api/auth/google/callback', async (req, reply) => {
+  app.get('/auth/google/callback', async (req, reply) => {
     const firmada = req.cookies.oauth_estado;
     const { valid, value } = firmada ? req.unsignCookie(firmada) : { valid: false };
     if (!valid || value !== req.query.state || !req.query.code) {
