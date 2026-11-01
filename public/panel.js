@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba } from './dom.js';
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, campoImagen, botonGoogleDeshabilitado, grupoBotones, campoFormulario, cuentasDePrueba, etiquetarTablas } from './dom.js';
 import { PLANTILLAS, plantillaPara } from './plantillas.js';
 import { seccionSalon, seccionPlazas, seccionRecepcion, seccionConfiguracion } from './salon.js';
 
@@ -145,6 +145,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
       h('tbody', {}, ...filas.map((fila) => h('tr', {}, ...columnas.map((columna) => h('td', {}, columna.mostrar(fila))),
         h('td', {}, h('div', { class: 'fila' }, h('button', { class: 'secundario', onclick: () => editar(fila) }, 'Editar'),
           h('button', { class: 'peligro', onclick: () => borrar(fila) }, 'Borrar'))))))) : h('p', { class: 'suave' }, 'Todavía no cargaste nada.'));
+    etiquetarTablas(tabla);
   }
 
   contenedor.append(h('h2', { style: 'margin-top:0' }, titulo), formulario, mensaje, tabla);
@@ -175,6 +176,7 @@ function seccionAgenda() {
           ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'secundario', onclick: () => cambiarEstado(turno, 'atendido') }, 'Atendido'),
           ['confirmado', 'en_curso'].includes(turno.estado) && h('button', { class: 'peligro', onclick: () => cambiarEstado(turno, 'cancelado') }, 'Cancelar'))))))
     ) : h('p', { class: 'suave' }, 'No hay turnos para este día.'));
+    etiquetarTablas(tabla);
   }
 
   fecha.addEventListener('change', cargar);

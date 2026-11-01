@@ -21,6 +21,7 @@ body {
   display: flex;
   flex-direction: column;
   height: 100vh;
+  height: 100dvh;
   max-width: 900px;
   margin: 0 auto;
   overflow: hidden;
@@ -244,3 +245,10 @@ body {
 .estado .mensaje-error { color: #b91c1c; width: 100%; }
 .estado button:disabled { opacity: .55; cursor: default; border-color: #c9c9c9; color: #666; }
 @media (max-width: 520px) { .estado { padding: 6px 10px; gap: 6px; font-size: .78rem; } .estado button { padding: 4px 10px; font-size: .78rem; } }
+
+@media (max-width: 720px) {
+  .chip { min-height: 44px; padding: 8px 14px; }
+  .volver { min-height: 40px; display: inline-flex; align-items: center; }
+  .estado button { min-height: 40px; }
+  .barra-inferior { padding-bottom: calc(10px + env(safe-area-inset-bottom)); }
+}

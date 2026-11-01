@@ -1,4 +1,4 @@
-import { h, api, mostrarError, campoImagen, grupoBotones, campoFormulario } from './dom.js';
+import { h, api, mostrarError, campoImagen, grupoBotones, campoFormulario, esMovil, etiquetarTablas } from './dom.js';
 import { crearLienzo, LEYENDA } from './lienzo.js';
 
 export function textoSituacion({ situacion, minutos }) {
@@ -108,14 +108,42 @@ function panelPlaza(plaza) {
       : h('p', { class: 'suave' }, 'Sin turnos pendientes hoy.'));
 }
 
+function pintarLista(lista, plazas, seleccionada, alTocar) {
+  lista.replaceChildren(...plazas.map((plaza) => h('button', {
+    type: 'button', class: `plaza-item ${plaza.estado} ${plaza.id === seleccionada ? 'seleccionada' : ''}`, onclick: () => alTocar(plaza.id),
+  }, h('span', { class: 'punto' }), h('span', { class: 'plaza-item-texto' },
+    h('strong', {}, plaza.nombre),
+    h('small', {}, `${plaza.tipo || 'plaza'} · 👥 ${plaza.capacidad}`),
+    h('small', { class: `situacion-${plaza.estado}` }, textoEstadoPlaza(plaza))))));
+}
+
+function selectorDeVista(contenedor) {
+  const aplicar = (vista) => { contenedor.classList.toggle('vista-lista', vista === 'lista'); contenedor.classList.toggle('vista-mapa', vista === 'mapa'); };
+  aplicar(esMovil() ? 'lista' : 'mapa');
+  const selector = grupoBotones([['lista', '📋 Lista'], ['mapa', '🗺️ Mapa']], esMovil() ? 'lista' : 'mapa');
+  selector.classList.add('solo-movil');
+  selector.addEventListener('change', () => aplicar(selector.value));
+  return selector;
+}
+
+function llevarA(elemento) {
+  if (esMovil()) elemento.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 const leyenda = () => h('div', { class: 'leyenda' }, ...LEYENDA.map(([texto, color]) => h('span', { style: `--color:${color}` }, texto)));
 const pistaPlaza = () => h('div', { class: 'tarjeta suave' }, 'Tocá una plaza para ver sus características y los turnos que vienen.');
 
 export function seccionSalon() {
   const lateral = h('div', {}, pistaPlaza());
-  const lienzo = crearLienzo({ alElegirPlaza: (plaza) => lateral.replaceChildren(panelPlaza(plaza)) });
-  return h('div', {}, h('h2', { style: 'margin-top:0' }, 'Salón en vivo'), leyenda(), lienzo.mensaje,
-    h('div', { class: 'dos-columnas' }, lienzo.mapa, lateral));
+  const lista = h('div', { class: 'lista-plazas' });
+  const contenedor = h('div', {});
+  const lienzo = crearLienzo({
+    alElegirPlaza: (plaza) => { lateral.replaceChildren(panelPlaza(plaza)); llevarA(lateral); },
+    alActualizar: (plazas, seleccionada) => pintarLista(lista, plazas, seleccionada, (id) => lienzo.seleccionar(id)),
+  });
+  contenedor.append(h('h2', { style: 'margin-top:0' }, 'Salón en vivo'), selectorDeVista(contenedor), leyenda(), lienzo.mensaje,
+    h('div', { class: 'dos-columnas' }, h('div', {}, lienzo.mapa, lista), lateral));
+  return contenedor;
 }
 
 export function seccionPlazas() {
@@ -123,7 +151,11 @@ export function seccionPlazas() {
   let plazaEnFormulario = null;
   const lateral = h('div', {}, pistaPlaza());
   const mensaje = h('p');
-  const lienzo = crearLienzo({ alElegirPlaza: elegir, mostrarInactivas: true });
+  const lista = h('div', { class: 'lista-plazas' });
+  const lienzo = crearLienzo({
+    alElegirPlaza: elegir, mostrarInactivas: true,
+    alActualizar: (plazas, seleccionada) => pintarLista(lista, plazas, seleccionada, (id) => lienzo.seleccionar(id)),
+  });
   const interruptor = h('button', { onclick: alternarEdicion }, '✏ Habilitar edición');
   const botonLinea = h('button', { class: 'secundario', hidden: true, onclick: () => lienzo.agregarGuia() }, '＋ Línea guía');
   const botonNueva = h('button', { hidden: true, onclick: agregarRapido }, '＋ Nueva plaza');
@@ -172,6 +204,7 @@ export function seccionPlazas() {
 
   function elegir(plaza) {
     if (editando) cargarFormulario(plaza); else lateral.replaceChildren(panelPlaza(plaza));
+    llevarA(lateral);
   }
 
   function alternarEdicion() {
@@ -227,8 +260,10 @@ export function seccionPlazas() {
     } catch (error) { mostrarError(mensaje, error); }
   }
 
-  return h('div', {},
-    h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Plazas'), interruptor, botonNueva, botonLinea),
+  const contenedor = h('div', {});
+  contenedor.append(
+    h('div', { class: 'fila' }, h('h2', { style: 'margin:0' }, 'Plazas'), interruptor, botonNueva, botonLinea), selectorDeVista(contenedor),
     h('p', { class: 'suave' }, 'Tocá una plaza para ver sus características. Con la edición habilitada podés crear plazas nuevas, editar las existentes, arrastrarlas, cambiar su tamaño y agregar líneas guía, todo desde acá.'),
-    leyenda(), lienzo.mensaje, mensaje, h('div', { class: 'dos-columnas' }, lienzo.mapa, lateral));
+    leyenda(), lienzo.mensaje, mensaje, h('div', { class: 'dos-columnas' }, h('div', {}, lienzo.mapa, lista), lateral));
+  return contenedor;
 }

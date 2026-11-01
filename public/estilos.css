@@ -31,7 +31,7 @@ th,td { text-align:left; padding:9px 12px; border-bottom:1px solid var(--borde);
 .centrado { max-width:380px; margin:8vh auto; }
 #chat-boton { position:fixed; right:18px; bottom:18px; border-radius:99px; padding:14px 20px; box-shadow:0 6px 20px #0003; z-index:20; }
 .etiqueta.en_curso { background:#fee2e2; color:#b91c1c; } .etiqueta.ausente { background:#e5e7eb; color:#374151; }
-.salon { container-type:inline-size; position:relative; width:100%; aspect-ratio:16/9; min-height:300px; background:#fff radial-gradient(#d9dce6 1px,transparent 1px) 0 0/22px 22px; border:2px dashed var(--borde); border-radius:14px; overflow:hidden; touch-action:none; }
+.salon { container-type:inline-size; position:relative; width:100%; aspect-ratio:16/9; background:#fff radial-gradient(#d9dce6 1px,transparent 1px) 0 0/22px 22px; border:2px dashed var(--borde); border-radius:14px; overflow:hidden; touch-action:none; }
 .plaza { position:absolute; width:9cqw; height:9cqw; transform:translate(-50%,-50%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; font-size:clamp(.68rem,1.5cqw,1.05rem); line-height:1.15; color:#fff; font-weight:600; cursor:grab; user-select:none; box-shadow:0 3px 8px #0003; border:3px solid #fff; background:var(--estado); overflow:visible; }
 .plaza.arrastrando { cursor:grabbing; box-shadow:0 8px 20px #0005; z-index:5; }
 .plaza small { font-weight:400; opacity:.9; }
@@ -139,11 +139,8 @@ button, .boton { border-radius: 10px; font-weight: 500; transition: background .
   header.barra .suave { display: none; } header.barra .boton, header.barra button { padding: 8px 12px; font-size: .92rem; }
   .hero { border-radius: 18px; } .hero-busqueda { flex-wrap: nowrap; } .hero-busqueda button { padding: 10px 14px; }
   .grilla { grid-template-columns: 1fr; } .tarjeta-portada { height: 190px; }
-  .anuncio { min-height: 190px; } .flecha { display: none; }
-  .pestanas { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-inline: -12px; padding-inline: 12px; } .pestanas::-webkit-scrollbar { display: none; } .pestanas button { white-space: nowrap; }
+  .anuncio { min-height: 190px; } .flecha { top: auto; bottom: 18px; transform: none; width: 44px; height: 44px; } .flecha.izquierda { left: auto; right: 62px; } .flecha.derecha { right: 12px; }
   .formulario { grid-template-columns: 1fr; } .dos-columnas { grid-template-columns: minmax(0, 1fr); }
-  .dos-columnas > :first-child { overflow-x: auto; } .salon { min-width: 640px; }
-  table { display: block; overflow-x: auto; white-space: nowrap; }
   .franjas button { flex: 1 1 22%; min-width: 74px; padding: 11px 6px; }
   .contador button { width: 46px; height: 46px; }
   .banda-comercios { text-align: center; justify-content: center; }
@@ -158,3 +155,45 @@ button, .boton { border-radius: 10px; font-weight: 500; transition: background .
 .hora-etiqueta { flex: 0 0 46px; font-weight: 700; color: var(--suave); font-size: .9rem; }
 .fila-hora .franjas { flex: 1; gap: 6px; }
 @media (max-width: 720px) { .fila-hora .franjas button { flex: 1 1 20%; min-width: 0; padding: 10px 4px; } .hora-etiqueta { flex-basis: 40px; } }
+
+/* ===== Celular: todo visible y cómodo para el pulgar ===== */
+.solo-movil { display: none; }
+.lista-plazas { display: none; }
+.plaza-item.libre { --estado: #10b981; } .plaza-item.proximo { --estado: #eab308; } .plaza-item.en_hora { --estado: #f97316; }
+.plaza-item.demorado { --estado: #dc2626; } .plaza-item.ausente { --estado: #6b7280; } .plaza-item.en_curso { --estado: #4f46e5; } .plaza-item.inactiva { --estado: #cbd5e1; }
+.plaza-item { display: flex; align-items: center; gap: 12px; text-align: left; background: #fff; color: var(--texto); border: 1px solid var(--borde); border-left: 6px solid var(--estado); border-radius: 12px; padding: 10px 14px; }
+.plaza-item:hover, .plaza-item.seleccionada { background: #eef2ff; } .plaza-item .punto { flex: 0 0 14px; height: 14px; border-radius: 50%; background: var(--estado); }
+.plaza-item-texto { display: grid; gap: 1px; } .plaza-item-texto small { color: var(--suave); }
+.vista-lista .lista-plazas { display: grid; gap: 8px; } .vista-lista .salon { display: none; }
+.vista-mapa .lista-plazas { display: none; }
+[id], .tarjeta, .dos-columnas > div { scroll-margin-top: 76px; }
+
+@media (max-width: 720px) {
+  .solo-movil { display: inline-flex; margin: 6px 0 4px; }
+  .pestanas { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 6px; border-bottom: 0; overflow: visible; }
+  .pestanas button { white-space: normal; padding: 10px 6px; }
+  .salon { aspect-ratio: 5 / 4; }
+  .plaza { font-size: clamp(.6rem, 2.6cqw, .85rem); }
+  button, .boton, textarea, input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=color]) { min-height: 44px; }
+  input, select, textarea { font-size: 16px; }
+  .segmentado button, .chips-rubro button, .cuentas-grilla button { min-height: 44px; }
+  header.barra .marca { padding: 8px 0; }
+  .pie a { display: inline-block; padding: 10px 0; }
+  .fila-hora .franjas button { min-height: 44px; }
+  .contador button { min-height: 46px; } .asa { width: 22px; height: 22px; margin: -11px 0 0 -11px; }
+  .informe .tarjeta table, main table { background: transparent; box-shadow: none; }
+  table, thead, tbody, tr, td { display: block; white-space: normal; }
+  thead { position: absolute; left: -9999px; }
+  tr { border: 1px solid var(--borde); border-radius: 12px; margin: 0 0 10px; padding: 6px 14px; background: #fff; box-shadow: var(--sombra); }
+  td { display: flex; justify-content: space-between; align-items: center; gap: 12px; border: 0; padding: 7px 0; text-align: right; }
+  td::before { content: attr(data-label); font-weight: 600; color: var(--suave); text-align: left; flex: 0 0 auto; }
+  td:empty, td[data-label=""]::before { display: none; }
+  td:last-child { justify-content: flex-start; } td:last-child .fila { width: 100%; }
+  td:last-child .fila button { flex: 1 1 40%; }
+}
+
+.barra-filtros { margin: 4px 0 8px; gap: 8px; }
+.filtro-activo { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; border-radius: 99px; text-transform: none; }
+.filtro-activo:hover { background: #e0e7ff; }
+.chips-rubro { padding: 12px; background: #fff; border: 1px solid var(--borde); border-radius: 14px; box-shadow: var(--sombra); }
+.chips-rubro[hidden], .filtro-activo[hidden] { display: none; }

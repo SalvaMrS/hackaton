@@ -44,7 +44,7 @@ function arrastrar(evento, elemento, { alMover, alSoltar, alTocar }) {
   elemento.addEventListener('pointerup', soltar);
 }
 
-export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
+export function crearLienzo({ alElegirPlaza, alActualizar, mostrarInactivas = false }) {
   const mapa = h('div', { class: 'salon' });
   const capaGuias = document.createElementNS(NS_SVG, 'svg');
   capaGuias.setAttribute('class', 'guias');
@@ -70,6 +70,7 @@ export function crearLienzo({ alElegirPlaza, mostrarInactivas = false }) {
     estado.guias.forEach(dibujarGuia);
     estado.plazas.forEach(dibujarPlaza);
     if (!estado.plazas.length) mapa.append(h('p', { class: 'suave', style: 'padding:20px' }, 'Todavía no hay plazas.'));
+    alActualizar?.(estado.plazas, estado.seleccionada);
   }
 
   function dibujarPlaza(plaza) {

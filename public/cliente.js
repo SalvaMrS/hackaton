@@ -162,15 +162,32 @@ async function mostrarBuscador() {
   const resultados = h('div', { class: 'grilla' });
   const texto = h('input', { type: 'search', placeholder: 'Buscá un servicio, rubro o comercio…' });
   const estado = h('p', { class: 'suave' });
-  const chips = h('div', { class: 'chips-rubro' });
+  const chips = h('div', { class: 'chips-rubro', hidden: true });
+  const botonFiltro = h('button', { type: 'button', class: 'secundario', 'aria-expanded': 'false', onclick: () => alternarFiltros() }, '🏷️ Filtrar por tipo ▾');
+  const filtroActivo = h('button', { type: 'button', class: 'filtro-activo', hidden: true, title: 'Quitar filtro', onclick: () => elegirRubro('') });
+  const barraFiltros = h('div', { class: 'fila barra-filtros' }, botonFiltro, filtroActivo);
   let rubroElegido = '';
+
+  function alternarFiltros(abrir = chips.hidden) {
+    chips.hidden = !abrir;
+    botonFiltro.textContent = abrir ? '🏷️ Ocultar tipos ▴' : '🏷️ Filtrar por tipo ▾';
+    botonFiltro.setAttribute('aria-expanded', String(abrir));
+  }
+
+  function elegirRubro(rubro) {
+    rubroElegido = rubro;
+    filtroActivo.hidden = !rubro;
+    filtroActivo.textContent = rubro ? `${iconoRubro(rubro)} ${rubro}  ✕` : '';
+    alternarFiltros(false);
+    cargarRubros();
+    buscar();
+  }
 
   async function cargarRubros() {
     const rubros = await api('/api/rubros').catch(() => []);
     chips.replaceChildren(...['', ...rubros].map((rubro) => h('button', {
-      type: 'button', class: rubro === rubroElegido ? 'activa' : '',
-      onclick: () => { rubroElegido = rubro; cargarRubros(); buscar(); },
-    }, rubro ? `${iconoRubro(rubro)} ${rubro}` : 'Todos')));
+      type: 'button', class: rubro === rubroElegido ? 'activa' : '', onclick: () => elegirRubro(rubro),
+    }, rubro ? `${iconoRubro(rubro)} ${rubro}` : 'Todos los tipos')));
   }
 
   async function buscar() {
@@ -206,7 +223,7 @@ async function mostrarBuscador() {
         h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección'),
         h('button', { type: 'button', class: 'secundario', disabled: true, title: 'Disponible con certificado SSL (HTTPS)' }, '📍 Cerca de mí · requiere SSL'))),
     h('div', { class: 'seccion' }, ubicacionTexto, zonaDireccion), publicidad,
-    h('section', { class: 'seccion' }, h('h2', {}, 'Comercios'), chips, estado, resultados),
+    h('section', { class: 'seccion' }, h('h2', {}, 'Comercios'), barraFiltros, chips, estado, resultados),
     ...(sesion.usuario ? [seccionMisTurnos()] : []), bandaParaComercios());
   cargarRubros();
   buscar();

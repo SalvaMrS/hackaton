@@ -203,3 +203,12 @@ export function cuentasDePrueba({ alIngresar }) {
   }).catch(() => {});
   return contenedor;
 }
+
+export const esMovil = () => window.matchMedia('(max-width: 720px)').matches;
+
+export function etiquetarTablas(contenedor) {
+  for (const tabla of contenedor.querySelectorAll('table')) {
+    const titulos = [...tabla.querySelectorAll('thead th')].map((titulo) => titulo.textContent.trim());
+    tabla.querySelectorAll('tbody tr').forEach((fila) => [...fila.children].forEach((celda, indice) => { celda.dataset.label = titulos[indice] ?? ''; }));
+  }
+}
