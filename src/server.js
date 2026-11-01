@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { fileURLToPath } from 'node:url';
 import fastifyCookie from '@fastify/cookie';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { randomBytes } from 'node:crypto';
 import { abrirBaseDeDatos } from './db.js';
 import { rutasAuth } from './rutas-auth.js';
@@ -14,6 +15,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   const app = Fastify({ logger: { redact: ['req.headers.cookie', 'req.headers.authorization'] } });
   app.decorate('db', db);
   app.register(fastifyCookie, { secret: process.env.SESSION_SECRET ?? randomBytes(32).toString('hex') });
+  app.register(fastifyRateLimit, { max: 300, timeWindow: '1 minute' });
   app.register(async (instancia) => rutasAuth(instancia));
   app.register(async (instancia) => rutasComercio(instancia));
   app.register(async (instancia) => rutasPublicas(instancia));
