@@ -17,6 +17,10 @@ export async function api(ruta, { metodo = 'GET', cuerpo } = {}) {
   });
   if (respuesta.status === 204) return null;
   const datos = await respuesta.json().catch(() => ({}));
+  if (respuesta.status === 401 && location.pathname === '/panel.html' && ruta !== '/api/auth/login') {
+    location.reload();
+    await new Promise(() => {});
+  }
   if (!respuesta.ok) throw Object.assign(new Error(datos.error?.message ?? 'Error inesperado'), { status: respuesta.status, code: datos.error?.code });
   return datos;
 }
