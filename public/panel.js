@@ -89,7 +89,7 @@ function seccionCrud({ ruta, titulo, campos, columnas }) {
   const entradas = Object.fromEntries(campos.map((campo) => {
     const entrada = campo.tipo === 'imagen' ? campoImagen() : campo.opciones
       ? h('select', {}, ...campo.opciones.map(([valor, texto]) => h('option', { value: valor }, texto)))
-      : h('input', { type: campo.tipo ?? 'text', value: campo.inicial ?? '', min: campo.min, step: campo.paso, required: campo.requerido });
+      : h('input', { type: campo.tipo ?? 'text', value: campo.inicial ?? '', min: campo.min, step: campo.paso, required: campo.requerido, list: campo.lista });
     return [campo.nombre, entrada];
   }));
 
@@ -180,11 +180,21 @@ function seccionAgenda() {
   return contenedor;
 }
 
+function conTiposDePlaza(seccion) {
+  const tipos = h('datalist', { id: 'tipos-plaza' });
+  api('/api/plazas').then((plazas) => {
+    const unicos = [...new Set(plazas.map((plaza) => plaza.tipo).filter(Boolean))];
+    tipos.append(...unicos.map((tipo) => h('option', { value: tipo })));
+  }).catch(() => {});
+  seccion.append(tipos);
+  return seccion;
+}
+
 const SECCIONES = {
   Salón: seccionSalon,
   Recepción: seccionRecepcion,
   Agenda: seccionAgenda,
-  Servicios: () => seccionCrud({
+  Servicios: () => conTiposDePlaza(seccionCrud({
     ruta: '/api/servicios', titulo: 'Catálogo de servicios',
     campos: [
       { nombre: 'nombre', etiqueta: 'Nombre', requerido: true },
@@ -193,6 +203,7 @@ const SECCIONES = {
       { nombre: 'caracteristicas', etiqueta: 'Características' },
       { nombre: 'descripcion', etiqueta: 'Descripción' },
       { nombre: 'imagen_url', etiqueta: 'Imagen del servicio', tipo: 'imagen' },
+      { nombre: 'tipo_plaza', etiqueta: 'Plaza que usa (tipo, opcional)', lista: 'tipos-plaza' },
       { nombre: 'oferta', etiqueta: 'En oferta', opciones: [[0, 'No'], [1, 'Sí']] },
       { nombre: 'precio_oferta_centavos', etiqueta: 'Precio de oferta ($)', tipo: 'number', escala: 100, inicial: 0, min: 0 },
       { nombre: 'activo', etiqueta: 'Visible', opciones: [[1, 'Sí'], [0, 'No']] },
@@ -206,7 +217,7 @@ const SECCIONES = {
       { etiqueta: 'Duración', mostrar: (fila) => `${fila.duracion_min} min` }, { etiqueta: 'Características', mostrar: (fila) => fila.caracteristicas },
       { etiqueta: 'Visible', mostrar: (fila) => (fila.activo ? 'Sí' : 'No') },
     ],
-  }),
+  )),
   Plazas: seccionPlazas,
   Configuración: seccionConfiguracion,
   Horarios: () => seccionCrud({

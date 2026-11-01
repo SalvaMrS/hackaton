@@ -43,9 +43,9 @@ function sumarMinutos(inicio, minutos) {
   return `${fecha}T${aHora(total)}`;
 }
 
-function plazasQueEntran(db, comercioId, personas) {
-  return db.prepare('SELECT id, nombre, capacidad FROM plazas WHERE comercio_id = ? AND activo = 1 AND capacidad >= ? ORDER BY capacidad, id')
-    .all(comercioId, personas);
+function plazasQueEntran(db, comercioId, personas, tipo) {
+  return db.prepare("SELECT id, nombre, capacidad FROM plazas WHERE comercio_id = ? AND activo = 1 AND capacidad >= ? AND (? = '' OR lower(tipo) = lower(?)) ORDER BY capacidad, id")
+    .all(comercioId, personas, tipo, tipo);
 }
 
 function plazaOcupada(db, plazaId, inicio, fin) {
@@ -63,7 +63,7 @@ export function obtenerServicioActivo(db, comercioId, servicioId) {
 
 export function calcularDisponibilidad(db, { comercioId, servicioId, fecha, personas = 1, ahora = ahoraLocal() }) {
   const servicio = obtenerServicioActivo(db, comercioId, servicioId);
-  const plazas = plazasQueEntran(db, comercioId, personas);
+  const plazas = plazasQueEntran(db, comercioId, personas, servicio.tipo_plaza);
   const rangos = db.prepare('SELECT apertura, cierre FROM horarios WHERE comercio_id = ? AND dia_semana = ? ORDER BY apertura')
     .all(comercioId, diaSemana(fecha));
 

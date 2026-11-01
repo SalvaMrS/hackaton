@@ -38,6 +38,7 @@ function leerServicio(body) {
   }
   return {
     imagen_url: imagenOpcional(body.imagen_url, 'imagen_url'),
+    tipo_plaza: textoOpcional(body.tipo_plaza, 'tipo_plaza', 40),
     oferta,
     precio_oferta_centavos: oferta ? precioOferta : 0,
     nombre: textoRequerido(body.nombre, 'nombre', 80),
@@ -159,7 +160,7 @@ export function rutasComercio(app) {
 
   registrarCrud(app, {
     ruta: '/api/servicios', tabla: 'servicios', orden: 'nombre', leer: leerServicio,
-    columnas: ['nombre', 'descripcion', 'caracteristicas', 'precio_centavos', 'duracion_min', 'activo', 'imagen_url', 'oferta', 'precio_oferta_centavos'],
+    columnas: ['nombre', 'descripcion', 'caracteristicas', 'precio_centavos', 'duracion_min', 'activo', 'imagen_url', 'tipo_plaza', 'oferta', 'precio_oferta_centavos'],
   });
   registrarCrud(app, {
     ruta: '/api/plazas', tabla: 'plazas', orden: 'nombre', leer: leerPlaza,
