@@ -88,8 +88,8 @@ export function rutasAuth(app) {
     if (!googleHabilitado()) throw errorHttp(404, 'google_deshabilitado', 'Google no está configurado');
     const estado = randomBytes(16).toString('hex');
     const destino = DESTINO_PERMITIDO.test(req.query.destino ?? '') ? req.query.destino : '/';
-    reply.setCookie('oauth_destino', destino, { httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
-    reply.setCookie('oauth_estado', estado, { signed: true, httpOnly: true, sameSite: 'lax', path: '/', maxAge: 600 });
+    reply.setCookie('oauth_destino', destino, { httpOnly: true, secure: 'auto', sameSite: 'lax', path: '/', maxAge: 600 });
+    reply.setCookie('oauth_estado', estado, { signed: true, httpOnly: true, secure: 'auto', sameSite: 'lax', path: '/', maxAge: 600 });
     const parametros = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID,
       redirect_uri: process.env.GOOGLE_REDIRECT_URI,

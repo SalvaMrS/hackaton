@@ -13,14 +13,23 @@ import { rutasSalon } from './salon.js';
 import { rutasImagenes, DIRECTORIO_SUBIDAS } from './imagenes.js';
 import { rutasGeocodificar } from './geocodificar.js';
 import { rutasEstadisticas } from './estadisticas.js';
+import { rutasTrafico } from './trafico.js';
+import { aplicarCabecerasDeSeguridad } from './seguridad.js';
 
 const publico = fileURLToPath(new URL('../public', import.meta.url));
 
 export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
   mkdirSync(DIRECTORIO_SUBIDAS, { recursive: true });
-  const app = Fastify({ bodyLimit: 4 * 1024 * 1024, logger: { redact: ['req.headers.cookie', 'req.headers.authorization'] } });
+  const secreto = process.env.SESSION_SECRET ?? randomBytes(32).toString('hex');
+  const app = Fastify({
+    bodyLimit: 4 * 1024 * 1024,
+    trustProxy: process.env.TRUST_PROXY === '1',
+    logger: { redact: ['req.headers.cookie', 'req.headers.authorization', 'req.headers["x-monitor-token"]'] },
+  });
   app.decorate('db', db);
-  app.register(fastifyCookie, { secret: process.env.SESSION_SECRET ?? randomBytes(32).toString('hex') });
+  aplicarCabecerasDeSeguridad(app);
+  rutasTrafico(app, { sal: secreto });
+  app.register(fastifyCookie, { secret: secreto });
   app.register(fastifyRateLimit, { max: 300, timeWindow: '1 minute' });
   app.register(async (instancia) => rutasAuth(instancia));
   app.register(async (instancia) => rutasComercio(instancia));
@@ -48,7 +57,7 @@ export function crearServidor({ db = abrirBaseDeDatos() } = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const app = crearServidor();
   const port = Number(process.env.PORT ?? 3000);
-  app.listen({ port, host: '0.0.0.0' }).catch((error) => {
+  app.listen({ port, host: process.env.HOST ?? '0.0.0.0' }).catch((error) => {
     app.log.error(error);
     process.exit(1);
   });

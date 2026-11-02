@@ -28,7 +28,7 @@ export async function api(ruta, { metodo = 'GET', cuerpo } = {}) {
 export function botonGoogleDeshabilitado() {
   return h('div', { class: 'google-pendiente' },
     h('button', { type: 'button', class: 'secundario', disabled: true }, 'Continuar con Google'),
-    h('span', { class: 'suave' }, 'Próximamente: el ingreso con Google queda pendiente de implementar porque el servidor aún no cuenta con certificado SSL (HTTPS), requisito de Google.'));
+    h('span', { class: 'suave' }, 'Próximamente: ingreso con Google. Mientras tanto, usá tu correo y contraseña.'));
 }
 
 export const dinero = (centavos) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(centavos / 100);
@@ -161,6 +161,40 @@ export function formularioDireccion({ alObtener }) {
       alObtener(ubicacion);
     } catch (error) { mensaje.textContent = error.message; }
   } }, direccion, h('button', { type: 'submit' }, 'Usar esta dirección'), mensaje);
+}
+
+const MENSAJES_GEOLOCALIZACION = {
+  1: 'Permiso denegado. Habilitá la ubicación para este sitio o escribí tu dirección.',
+  2: 'No se pudo determinar tu ubicación. Probá escribiendo tu dirección.',
+  3: 'La ubicación tardó demasiado. Probá de nuevo o escribí tu dirección.',
+};
+
+export function botonUbicacionAutomatica({ alObtener }) {
+  const mensaje = h('span', { class: 'mensaje-error' });
+  const boton = h('button', { type: 'button', class: 'secundario' }, '📍 Cerca de mí');
+  if (!window.isSecureContext || !('geolocation' in navigator)) {
+    boton.disabled = true;
+    mensaje.textContent = 'Tu navegador no permite la ubicación automática.';
+    return h('span', {}, boton, mensaje);
+  }
+  boton.onclick = () => {
+    mensaje.textContent = '';
+    boton.disabled = true;
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        const ubicacion = { lat: Number(coords.latitude.toFixed(5)), lng: Number(coords.longitude.toFixed(5)), nombre: '' };
+        guardarUbicacion(ubicacion);
+        boton.disabled = false;
+        alObtener(ubicacion);
+      },
+      (error) => {
+        boton.disabled = false;
+        mensaje.textContent = MENSAJES_GEOLOCALIZACION[error.code] ?? MENSAJES_GEOLOCALIZACION[2];
+      },
+      { enableHighAccuracy: false, timeout: 10_000, maximumAge: 300_000 },
+    );
+  };
+  return h('span', {}, boton, mensaje);
 }
 
 const ICONOS_RUBRO = [

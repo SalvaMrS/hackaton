@@ -1,6 +1,6 @@
 # Turnia: recepción con IA para cualquier comercio
 
-Informe del proyecto · Hackatón Donweb Day · **201.32.132.177** (también en `/informe.html`).
+Informe del proyecto · Hackatón Donweb Day · **https://turnia.store** (también en `/informe.html`).
 
 Las consultas por WhatsApp, teléfono o en persona se pierden. Esta plataforma las convierte en turnos organizados para cualquier rubro.
 
@@ -46,7 +46,7 @@ Las consultas por WhatsApp, teléfono o en persona se pierden. Esta plataforma l
 ### Plataforma
 - Reserva atómica: no se puede reservar dos veces la misma plaza.
 - Límite de consultas, claves fuera del repositorio y 58 tests automáticos.
-- Desplegada en el Cloud Server de Donweb. Ingreso con Google y ubicación automática implementados, pendientes de certificado SSL.
+- Desplegada en el Cloud Server de Donweb. Servida por HTTPS con certificado de Let's Encrypt. Ubicación automática del navegador disponible; el ingreso con Google está implementado y pendiente de credenciales OAuth.
 
 ## Lo que ofrecemos
 

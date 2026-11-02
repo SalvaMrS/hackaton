@@ -24,6 +24,7 @@ export function iniciarSesion(reply, usuarioId) {
   reply.setCookie(COOKIE, String(usuarioId), {
     signed: true,
     httpOnly: true,
+    secure: 'auto',
     sameSite: 'lax',
     path: '/',
     maxAge: DURACION_SEGUNDOS,

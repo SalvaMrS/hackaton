@@ -1,5 +1,5 @@
 import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, contador, campoFormulario,
-  leerUbicacionGuardada, formularioDireccion, iconoRubro, cuentasDePrueba, esMovil } from './dom.js';
+  leerUbicacionGuardada, formularioDireccion, botonUbicacionAutomatica, iconoRubro, cuentasDePrueba, esMovil } from './dom.js';
 import { iniciarChat } from './chat.js';
 
 const app = document.getElementById('app');
@@ -229,7 +229,7 @@ async function mostrarBuscador() {
       h('form', { class: 'hero-busqueda', onsubmit: (evento) => { evento.preventDefault(); buscar(); } }, texto, h('button', { type: 'submit' }, 'Buscar')),
       h('div', { class: 'fila hero-acciones' },
         h('button', { type: 'button', class: 'secundario', onclick: () => pedirDireccion('Escribí tu dirección o barrio:') }, '✏️ Mi dirección'),
-        h('button', { type: 'button', class: 'secundario', disabled: true, title: 'Disponible con certificado SSL (HTTPS)' }, '📍 Cerca de mí · requiere SSL'))),
+        botonUbicacionAutomatica({ alObtener: fijarUbicacion }))),
     h('div', { class: 'seccion' }, ubicacionTexto, zonaDireccion), publicidad,
     h('section', { class: 'seccion' }, h('h2', {}, 'Comercios'), barraFiltros, chips, estado, resultados),
     ...(sesion.usuario ? [seccionMisTurnos()] : []), bandaParaComercios());
