@@ -1,4 +1,4 @@
-import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, grupoBotones, contador, campoFormulario,
+import { h, api, dinero, DIAS, fechaHoy, mostrarError, botonGoogleDeshabilitado, contador, campoFormulario,
   leerUbicacionGuardada, formularioDireccion, iconoRubro, cuentasDePrueba, esMovil } from './dom.js';
 import { iniciarChat } from './chat.js';
 

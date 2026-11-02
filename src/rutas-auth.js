@@ -50,7 +50,7 @@ function buscarOCrearUsuarioGoogle(db, { sub, email, name }) {
 export function rutasAuth(app) {
   const { db } = app;
 
-  app.post('/api/auth/registro', async (req, reply) => {
+  app.post('/api/auth/registro', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     validarCredenciales(req.body ?? {});
     const { email, password, nombre = '' } = req.body;
     if (db.prepare('SELECT 1 FROM usuarios WHERE email = ?').get(email)) {
@@ -63,7 +63,7 @@ export function rutasAuth(app) {
     return reply.status(201).send({ ok: true });
   });
 
-  app.post('/api/auth/login', async (req, reply) => {
+  app.post('/api/auth/login', { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } }, async (req, reply) => {
     validarCredenciales(req.body ?? {});
     const { email, password } = req.body;
     const usuario = db.prepare('SELECT id, password_hash FROM usuarios WHERE email = ?').get(email);

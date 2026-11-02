@@ -1,6 +1,6 @@
-# Turnos: recepción con IA para cualquier comercio
+# Turnia: recepción con IA para cualquier comercio
 
-Informe del proyecto · Hackatón Donweb Day · **http://201.32.132.177/** (también en `/informe.html`).
+Informe del proyecto · Hackatón Donweb Day · **201.32.132.177** (también en `/informe.html`).
 
 Las consultas por WhatsApp, teléfono o en persona se pierden. Esta plataforma las convierte en turnos organizados para cualquier rubro.
 

@@ -1,4 +1,4 @@
-import { h, api, mostrarError, grupoBotones, etiquetarTablas, dinero } from './dom.js';
+import { h, api, mostrarError, grupoBotones, etiquetarTablas } from './dom.js';
 
 const RANGOS = [['hoy', 'Hoy'], ['semana', 'Próximos 7 días'], ['todo', 'Todo']];
 const FILTROS = [['todos', 'Todos'], ['ocupado', 'Ocupados'], ['falta', 'Faltan']];

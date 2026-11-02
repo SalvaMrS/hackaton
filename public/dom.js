@@ -163,12 +163,6 @@ export function formularioDireccion({ alObtener }) {
   } }, direccion, h('button', { type: 'submit' }, 'Usar esta dirección'), mensaje);
 }
 
-export function botonUbicacionDeshabilitado() {
-  return h('div', { class: 'google-pendiente' },
-    h('button', { type: 'button', class: 'secundario', disabled: true }, '📍 Cerca de mí (automático)'),
-    h('span', { class: 'suave' }, 'Próximamente: la ubicación automática quedaría disponible con certificado SSL (HTTPS); el navegador la bloquea sin él. Mientras tanto, escribí tu dirección.'));
-}
-
 const ICONOS_RUBRO = [
   ['peluquer', '✂️'], ['barber', '✂️'], ['restaurante', '🍽️'], ['consultorio', '🩺'], ['pilates', '🧘'], ['yoga', '🧘'], ['cancha', '⚽'],
   ['taller', '🔧'], ['gomer', '🛞'], ['lavadero', '🚗'], ['software', '💻'], ['desarroll', '💻'], ['veterinaria', '🐾'], ['spa', '💆'],
